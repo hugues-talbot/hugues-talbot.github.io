@@ -70,7 +70,7 @@ Solutions and code
 |01| [Tutorial 1 solution](/files/TD1-solution.pdf)         | Solution to the first tutorial |
 |02| [a Python Simplex solver](/files/simplexe.py)          | Basic, commented Simplex solver |
 |03| [Sudoku solver](/files/Sudoku_ilp.ipynb)               | This code requires [cvxopt](http://cvxopt.org/install/index.html). |
-
+|04} [Excel Couple](/files/Excel/Solution_Portes_Couple.xlsx) | Solution Doors and Couple |
 
 Code 1
 ------
