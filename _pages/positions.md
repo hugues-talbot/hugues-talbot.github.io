@@ -1,5 +1,5 @@
 ---
-layout: archive
+layout: single 
 title: "Positions open"
 permalink: /positions/
 author_profile: true
