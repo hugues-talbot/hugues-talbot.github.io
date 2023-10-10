@@ -1,5 +1,6 @@
 ---
 title: "Optimisation for AI"
+layout: single
 collection: teaching
 type: "Full course"
 permalink: /teaching/2023_Optimisation_for_AI
