@@ -9,6 +9,9 @@ date: 2026-05-13
 location: "Saclay, France"
 ---
 
+Double-degree MVA-CS FAQ
+===============
+
 # CentraleSupélec - MVA double degree program
 ## Author: Hugues Talbot -- 2026-05-13
 
