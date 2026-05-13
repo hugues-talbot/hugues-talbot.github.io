@@ -2,7 +2,7 @@
 title: "MVA-CS double degree program admission FAQ"
 layout: single
 collection: teaching
-type: "Administration"
+type: "Course"
 permalink: /teaching/MVA-CS_Admission_FAQ
 venue: "CentraleSupelec"
 date: 2026-05-13
