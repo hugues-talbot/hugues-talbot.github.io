@@ -1,4 +1,16 @@
-﻿# CentraleSupélec - MVA double degree program
+﻿---
+title: "MVA-CS double degree program admission FAQ"
+layout: single
+collection: teaching
+type: "Administration"
+permalink: /teaching/MVA-CS_Admission_FAQ
+venue: "CentraleSupelec"
+date: 2026-05-13
+location: "Saclay, France"
+---
+
+
+# CentraleSupélec - MVA double degree program
 ## Author: Hugues Talbot -- 2026-05-13
 
 This document puts together answers to Frequently Asked Questions about the Double-Degree program between ENS Paris-Saclay Master's degree in Mathematics, Vision, and Machine learning (Mathématiques, Vision, Apprentissage or MVA) and CentraleSupélec.
