@@ -38,12 +38,11 @@ Generally no. The MVA administration does offer a few places for people already 
 No. There is no provision in the schedule for people working part-time in a company. The internship is also more difficult to manage.
 
 ### How can I apply ?
-There is only one way for CS students to apply, through the Inception website of the Paris-Saclay university.
-https://inception.universite-paris-saclay.fr/fr/
+There is only one way for CS students to apply, through the [Inception](https://inception.universite-paris-saclay.fr/fr/)
+ website of the Paris-Saclay university.
 
 ### How can I get more information about how to apply ? 
-The reference document is this one:
-https://www.master-mva.com/formation-mva/candidatures/
+The reference document is [this one](https://www.master-mva.com/formation-mva/candidatures/).
 
 ### What is the application deadline?
 You can apply between 05/01 and 06/30.
