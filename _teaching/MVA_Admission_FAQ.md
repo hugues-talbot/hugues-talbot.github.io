@@ -9,20 +9,19 @@ date: 2026-05-13
 location: "Saclay, France"
 ---
 
-
 # CentraleSupélec - MVA double degree program
 ## Author: Hugues Talbot -- 2026-05-13
 
 This document puts together answers to Frequently Asked Questions about the Double-Degree program between ENS Paris-Saclay Master's degree in Mathematics, Vision, and Machine learning (Mathématiques, Vision, Apprentissage or MVA) and CentraleSupélec.
 
-These questions and answers are typically updated in April-May of each year due to the admission schedule of the MVA Master's degree.
+These notes only specifically concern this particular double-degree program and nothing else. If you are applying to the MVA program outside of this program, these answers almost certainly do not concern you.
 
-Note that these notes only specifically concern this particular double-degree program and nothing else. If you are applying to the MVA program outside of this program, these answers almost certainly do not concern you.
+These questions and answers are typically updated in April-May of each year due to the admission schedule of the MVA Master's degree.
 
 ## Frequently asked questions 
 
 ### Who runs the MVA ? Who decides on admission?
-MVA is officially run by ENS Paris-Saclay. The director of the MVA makes the ultimate admission decisions. A team led by Hugues Talbot at CS makes detailed and motivated recommendations with a principal and secondary admission list.
+MVA is officially run by ENS Paris-Saclay. The director of the MVA makes the ultimate admission decisions. A team led by Hugues Talbot at CS makes detailed and motivated recommendations for admission into the double-degree program of MVA with CentraleSupéle, with a principal and secondary admission list. Generally, MVA follows our recommendations but not always.
 
 ### Who can apply ?
 Any 2nd year student at CS, whether after a "césure" (gap year) or not, can apply to the MVA double-degree program and can potentially be admitted. However note that only the SDI track in Paris-Saclay and Quantitative MMF tracks have an agreement with ENS. For these tracks, some courses from the SDI track count as courses for the MVA, which reduces the course load significantly. Other tracks do not have this agreement and the course workload is therefore quite significant. 
@@ -92,7 +91,12 @@ It is not necessary to follow the "metiers de la recherche" track at CS to apply
 No, definitely not. These are not comparable from one year to another.
 
 #### Do I need to state that I'm going to pursue a PhD in my motivation letter, even if I'm not really sure about this.
-No need, just be honest in your motivation letter.
+No need, just be honest in your motivation letter.A
+
+#### Do I need to do a gap year ("césure") to have a good chance to be admitted to MVA?
+Generally, no. It very much depends on what **you** want to do. Doing a gap year gives you the opportunity to realize interesting internships or personal projects, which may be difficult to do later in life. Also if you are not sure about what you want to do during your last year at CentraleSupélec, or more generally during your career, a gap year might help. If you are already pretty sure, a gap year may be useless or irrelevant.
+
+However this choice does not affect admission into the MVA very much. The vast majority of students admitted to the CS-MVA DD program have done a gap year but this is a reflection of the fact that most CS students do a gap year, this is not a requirement. It does mean that your application will probably be more academically inclined since you will not have had as much experience, in ML in particular, but this is perfectly fine, we take this into account.
 
 #### Do you read every document in the application file, even the motivation letter and the recommendation letters?
  **YES** !!! make sure these are well written and as short as possible.
