@@ -7,6 +7,10 @@ author_profile: true
 In this section I shall post some interesting links to a few past and
 present projects I have been involved with
 
+### Software
+
+[NebulaScope — an astronomical image inspector](/nebulascope/) — user manual & developer guide
+
 ### Recent projects
 
 * The ANR
