@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>5&nbsp; The SVD and spectral analysis – Deblurring images, in Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../chapters/06_regularisation_by_filtering.html" rel="next">
+<link href="../chapters/04_structured_computations.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-bf8541b1296accc9344c8d492b94c564.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/01_the_deblurring_problem.html">The book, chapter by chapter</a></li><li class="breadcrumb-item"><a href="../chapters/05_svd_and_spectral_analysis.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Deblurring images, in Python</a> 
+        <div class="sidebar-tools-main">
+    <a href="../deblurring-images-in-python.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">The book, chapter by chapter</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01_the_deblurring_problem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The image deblurring problem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02_images_as_arrays.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03_the_blurring_function.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">The blurring function</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04_structured_computations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Structured computations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05_svd_and_spectral_analysis.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06_regularisation_by_filtering.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07_colour_and_smoothing_norms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Colour images and smoothing norms</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Towards the research project</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/08_from_one_frame_to_many.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/09_iterative_methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Iterative methods: when there is no closed form</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hnotools_listing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">The helper module <code>hnotools.py</code></span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#the-svd-of-a-blur" id="toc-the-svd-of-a-blur" class="nav-link active" data-scroll-target="#the-svd-of-a-blur"><span class="header-section-number">5.1</span> The SVD of a blur</a></li>
+  <li><a href="#the-naive-solution-channel-by-channel" id="toc-the-naive-solution-channel-by-channel" class="nav-link" data-scroll-target="#the-naive-solution-channel-by-channel"><span class="header-section-number">5.2</span> The naive solution, channel by channel</a></li>
+  <li><a href="#spectral-filtering" id="toc-spectral-filtering" class="nav-link" data-scroll-target="#spectral-filtering"><span class="header-section-number">5.3</span> Spectral filtering</a></li>
+  <li><a href="#two-dimensions-the-patterns-are-images" id="toc-two-dimensions-the-patterns-are-images" class="nav-link" data-scroll-target="#two-dimensions-the-patterns-are-images"><span class="header-section-number">5.4</span> Two dimensions: the patterns are images</a></li>
+  <li><a href="#real-data-what-stacking-buys" id="toc-real-data-what-stacking-buys" class="nav-link" data-scroll-target="#real-data-what-stacking-buys"><span class="header-section-number">5.5</span> Real data: what stacking buys</a></li>
+  <li><a href="#your-turn" id="toc-your-turn" class="nav-link" data-scroll-target="#your-turn">Your turn</a></li>
+  <li><a href="#where-to-read-more" id="toc-where-to-read-more" class="nav-link" data-scroll-target="#where-to-read-more">Where to read more</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/01_the_deblurring_problem.html">The book, chapter by chapter</a></li><li class="breadcrumb-item"><a href="../chapters/05_svd_and_spectral_analysis.html"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><em>Companion notebook to Hansen, Nagy &amp; O’Leary, <strong>Deblurring Images</strong>, chapter 5.</em></p>
+<p>Notebook 1 showed <em>that</em> the naive solution fails. This one shows <em>why</em>, with the one tool that explains every linear inverse problem: the <strong>singular value decomposition</strong> (SVD).</p>
+<p><strong>What you will take away</strong></p>
+<ol type="1">
+<li>The SVD splits a blur into independent channels, each with its own gain <span class="math inline">\(\sigma_i\)</span>. Small gain means: that component of the scene barely reaches the data.</li>
+<li>The naive solution divides each channel by its gain. Where the gain is below the noise, it divides noise by almost zero.</li>
+<li>The <strong>Picard plot</strong> shows, on your own data, how many channels carry information. It is the first thing to draw for any inverse problem.</li>
+<li>A regularised solution is a <strong>filtered</strong> sum over the channels.</li>
+<li>For images with periodic boundaries, the channels are spatial frequencies and the SVD is the Fourier transform you already know.</li>
+</ol>
+<div id="5b4e9e69" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:01.893824Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:01.893633Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:02.140939Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:02.140345Z&quot;}}" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> numpy.fft <span class="im">import</span> fft2, ifft2</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> hnotools <span class="im">as</span> hno</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>hno.style()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">0</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> hno.load_sample()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="the-svd-of-a-blur" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="the-svd-of-a-blur"><span class="header-section-number">5.1</span> The SVD of a blur</h2>
+<p>We start in one dimension, with the signal of notebook 1 and a <span class="math inline">\(250 \times 250\)</span> blurring matrix, because there everything can be computed and plotted. (The Gaussian kernel is the same as in notebook 1, except that we no longer cut it short at 25 samples; exercise 4 shows what the cut does.)</p>
+<p>Any matrix can be written</p>
+<p><span class="math display">\[A = U\,\Sigma\,V^{\mathsf T} = \sum_i \sigma_i\, u_i\, v_i^{\mathsf T},\]</span></p>
+<p>with orthonormal <em>right singular vectors</em> <span class="math inline">\(v_i\)</span> (patterns in the scene), orthonormal <em>left singular vectors</em> <span class="math inline">\(u_i\)</span> (patterns in the data), and <em>singular values</em> <span class="math inline">\(\sigma_1 \ge \sigma_2 \ge \dots \ge 0\)</span>. Read it as a three-step machine: decompose the scene on the patterns <span class="math inline">\(v_i\)</span>, multiply the <span class="math inline">\(i\)</span>-th coefficient by <span class="math inline">\(\sigma_i\)</span>, rebuild with the patterns <span class="math inline">\(u_i\)</span>.</p>
+<div id="cell-fig-svd" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:02.142735Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:02.142600Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:02.534925Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:02.534480Z&quot;}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">250</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>s, signal <span class="op">=</span> hno.lecture_signal(N)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>A <span class="op">=</span> hno.blur_matrix_1d(hno.gaussian_kernel_1d(<span class="fl">4.0</span>, <span class="dv">40</span>), N)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>U, sv, Vt <span class="op">=</span> np.linalg.svd(A)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'A equals U diag(sv) Vt:'</span>, np.allclose(A, U <span class="op">@</span> np.diag(sv) <span class="op">@</span> Vt))</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'largest singular value </span><span class="sc">{</span>sv[<span class="dv">0</span>]<span class="sc">:.3f}</span><span class="ss">, smallest </span><span class="sc">{</span>sv[<span class="op">-</span><span class="dv">1</span>]<span class="sc">:.1e}</span><span class="ss">, ratio (condition number) </span><span class="sc">{</span>sv[<span class="dv">0</span>] <span class="op">/</span> sv[<span class="op">-</span><span class="dv">1</span>]<span class="sc">:.1e}</span><span class="ss">'</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="fl">3.2</span>), gridspec_kw<span class="op">=</span>{<span class="st">'width_ratios'</span>: [<span class="dv">1</span>, <span class="fl">1.4</span>]})</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].semilogy(np.arange(<span class="dv">1</span>, N <span class="op">+</span> <span class="dv">1</span>), sv, color<span class="op">=</span>hno.BLUE)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].set_xlabel(<span class="st">'index $i$'</span>)<span class="op">;</span> ax[<span class="dv">0</span>].set_title(<span class="st">'singular values $</span><span class="ch">\\</span><span class="st">sigma_i$'</span>, loc<span class="op">=</span><span class="st">'left'</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, col <span class="kw">in</span> <span class="bu">zip</span>((<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">19</span>, <span class="dv">79</span>), (hno.INK2, hno.BLUE, hno.ORANGE, hno.AQUA)):</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    ax[<span class="dv">1</span>].plot(s, Vt[i] <span class="op">+</span> <span class="fl">0.25</span> <span class="op">*</span> (<span class="dv">3</span> <span class="op">-</span> (<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">19</span>, <span class="dv">79</span>).index(i)), color<span class="op">=</span>col, lw<span class="op">=</span><span class="fl">1.2</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    ax[<span class="dv">1</span>].text(s[<span class="op">-</span><span class="dv">1</span>] <span class="op">+</span> <span class="fl">0.1</span>, <span class="fl">0.25</span> <span class="op">*</span> (<span class="dv">3</span> <span class="op">-</span> (<span class="dv">0</span>, <span class="dv">4</span>, <span class="dv">19</span>, <span class="dv">79</span>).index(i)), <span class="ss">f'$v_</span><span class="ch">{{</span><span class="sc">{</span>i <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ch">}}</span><span class="ss">$'</span>, va<span class="op">=</span><span class="st">'center'</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].set_yticks([])<span class="op">;</span> ax[<span class="dv">1</span>].set_xlim(<span class="dv">0</span>, s[<span class="op">-</span><span class="dv">1</span>] <span class="op">+</span> <span class="fl">0.9</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].set_title(<span class="st">'four right singular vectors (shifted vertically)'</span>, loc<span class="op">=</span><span class="st">'left'</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>A equals U diag(sv) Vt: True
+largest singular value 0.999, smallest 8.4e-18, ratio (condition number) 1.2e+17</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-svd" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-svd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05_svd_and_spectral_analysis_files/figure-html/fig-svd-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-svd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.1: Singular values of a one-dimensional blur, and four of its right singular vectors.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Two facts, true for every blur:</p>
+<ul>
+<li>the singular values <strong>decay</strong> steadily, over many orders of magnitude, with no gap, until they reach the rounding level of the computer near <span class="math inline">\(10^{-17}\)</span>;</li>
+<li>the singular vectors <strong>oscillate more and more</strong> as the index grows.</li>
+</ul>
+<p>Together they say: <em>a blur transmits smooth patterns well and fine patterns badly</em>. That is all a blur is.</p>
+</section>
+<section id="the-naive-solution-channel-by-channel" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="the-naive-solution-channel-by-channel"><span class="header-section-number">5.2</span> The naive solution, channel by channel</h2>
+<p>Since <span class="math inline">\(U\)</span> and <span class="math inline">\(V\)</span> are orthogonal, the solution of <span class="math inline">\(A x = b\)</span> is</p>
+<p><span class="math display">\[x_{\text{naive}} = \sum_i \frac{u_i^{\mathsf T} b}{\sigma_i}\; v_i .\]</span></p>
+<p>Each coefficient of the data, <span class="math inline">\(u_i^{\mathsf T} b\)</span>, is divided by the gain of its channel. With noisy data <span class="math inline">\(b = b_{\text{exact}} + e\)</span>, each coefficient is the sum of a signal part and a noise part. Plot both, and the singular values:</p>
+<div id="cell-fig-picard" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:02.536755Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:02.536605Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:02.685759Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:02.685219Z&quot;}}" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>noise <span class="op">=</span> <span class="fl">2e-4</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>b_exact <span class="op">=</span> A <span class="op">@</span> signal</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> b_exact <span class="op">+</span> noise <span class="op">*</span> rng.standard_normal(N)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>coef_exact <span class="op">=</span> np.<span class="bu">abs</span>(U.T <span class="op">@</span> b_exact)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>coef <span class="op">=</span> np.<span class="bu">abs</span>(U.T <span class="op">@</span> b)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>idx <span class="op">=</span> np.arange(<span class="dv">1</span>, N <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">7.5</span>, <span class="fl">3.8</span>))</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>ax.semilogy(idx, sv, color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">1.2</span>, ls<span class="op">=</span>(<span class="dv">0</span>, (<span class="dv">4</span>, <span class="dv">2</span>)), label<span class="op">=</span><span class="st">'singular values $</span><span class="ch">\\</span><span class="st">sigma_i$'</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>ax.semilogy(idx, coef_exact, <span class="st">'.'</span>, color<span class="op">=</span>hno.AQUA, ms<span class="op">=</span><span class="dv">4</span>, label<span class="op">=</span><span class="st">'exact data $|u_i^T b_</span><span class="sc">{exact}</span><span class="st">|$'</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>ax.semilogy(idx, coef, <span class="st">'.'</span>, color<span class="op">=</span>hno.BLUE, ms<span class="op">=</span><span class="dv">4</span>, label<span class="op">=</span><span class="st">'noisy data $|u_i^T b|$'</span>)</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>ax.semilogy(idx, coef <span class="op">/</span> sv, <span class="st">'.'</span>, color<span class="op">=</span>hno.ORANGE, ms<span class="op">=</span><span class="dv">4</span>, label<span class="op">=</span><span class="st">'naive coefficients $|u_i^T b| / </span><span class="ch">\\</span><span class="st">sigma_i$'</span>)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>ax.axhline(noise, color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>ax.text(N, noise <span class="op">*</span> <span class="fl">1.6</span>, <span class="st">'noise level'</span>, ha<span class="op">=</span><span class="st">'right'</span>, fontsize<span class="op">=</span><span class="dv">8</span>, color<span class="op">=</span>hno.INK2)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="fl">1e-19</span>, <span class="fl">1e14</span>)<span class="op">;</span> ax.set_xlabel(<span class="st">'index $i$'</span>)</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'The Picard plot'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax.legend(loc<span class="op">=</span><span class="st">'lower left'</span>, fontsize<span class="op">=</span><span class="dv">8</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-picard" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-picard-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05_svd_and_spectral_analysis_files/figure-html/fig-picard-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-picard-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.2: The Picard plot of the one-dimensional problem.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><a href="#fig-picard" class="quarto-xref">Figure&nbsp;<span>5.2</span></a> is the <strong>Picard plot</strong>. Take the time to read it.</p>
+<ul>
+<li><strong>Green, exact data.</strong> The coefficients fall <em>faster</em> than the singular values (dashed). This is the <em>discrete Picard condition</em>: it means the exact problem has a decent solution, because <span class="math inline">\(|u_i^{\mathsf T} b| / \sigma_i\)</span> stays bounded.</li>
+<li><strong>Blue, noisy data.</strong> The coefficients follow the green ones at first, then <strong>level off at the noise level</strong>. From there on, they <em>are</em> noise: the signal that used to be there is far below.</li>
+<li><strong>Orange, what the naive solution uses.</strong> Fine on the left. On the right, noise divided by smaller and smaller <span class="math inline">\(\sigma_i\)</span>: the coefficients grow without limit. The naive solution is dominated by its last, meaningless terms.</li>
+</ul>
+<p>The index where the blue points meet the noise floor is the number of channels through which the data tell us anything.</p>
+</section>
+<section id="spectral-filtering" class="level2" data-number="5.3">
+<h2 data-number="5.3" class="anchored" data-anchor-id="spectral-filtering"><span class="header-section-number">5.3</span> Spectral filtering</h2>
+<p>The cure is now obvious: keep the terms that carry information, damp or drop the others. Every method of chapter 6 has the form</p>
+<p><span class="math display">\[x_{\text{filt}} = \sum_i \phi_i\, \frac{u_i^{\mathsf T} b}{\sigma_i}\; v_i ,\]</span></p>
+<p>with <em>filter factors</em> <span class="math inline">\(\phi_i\)</span> close to 1 for the good channels and close to 0 for the bad ones. The simplest choice keeps the first <span class="math inline">\(k\)</span> terms and drops the rest: the <strong>truncated SVD</strong> (TSVD).</p>
+<div id="cell-fig-tsvd" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:02.687343Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:02.687252Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:02.883170Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:02.882785Z&quot;}}" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tsvd(U, sv, Vt, b, k):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Truncated SVD solution: the first k terms of the naive sum."""</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Vt[:k].T <span class="op">@</span> ((U[:, :k].T <span class="op">@</span> b) <span class="op">/</span> sv[:k])</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>ks <span class="op">=</span> np.arange(<span class="dv">1</span>, <span class="dv">140</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>errors <span class="op">=</span> [hno.rel_error(tsvd(U, sv, Vt, b, k), signal) <span class="cf">for</span> k <span class="kw">in</span> ks]</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>k_best <span class="op">=</span> <span class="bu">int</span>(ks[np.argmin(errors)])</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>k_floor <span class="op">=</span> <span class="bu">int</span>(np.argmax(coef <span class="op">&lt;</span> <span class="dv">3</span> <span class="op">*</span> noise)) <span class="op">+</span> <span class="dv">1</span>              <span class="co"># first coefficient at the noise floor</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'best k = </span><span class="sc">{</span>k_best<span class="sc">}</span><span class="ss"> (error </span><span class="sc">{</span><span class="bu">min</span>(errors)<span class="sc">:.3f}</span><span class="ss">);   first coefficient within 3x of the noise floor: i = </span><span class="sc">{</span>k_floor<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="fl">3.3</span>), gridspec_kw<span class="op">=</span>{<span class="st">'width_ratios'</span>: [<span class="dv">1</span>, <span class="fl">1.5</span>]})</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].semilogy(ks, errors, color<span class="op">=</span>hno.BLUE)<span class="op">;</span> ax[<span class="dv">0</span>].plot(k_best, <span class="bu">min</span>(errors), <span class="st">'o'</span>, color<span class="op">=</span>hno.ORANGE)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].set_xlabel(<span class="st">'number of terms $k$'</span>)<span class="op">;</span> ax[<span class="dv">0</span>].set_title(<span class="st">'relative error of the TSVD solution'</span>, loc<span class="op">=</span><span class="st">'left'</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].plot(s, signal, color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">1.0</span>, label<span class="op">=</span><span class="st">'true signal'</span>)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k, col <span class="kw">in</span> ((<span class="dv">8</span>, hno.AQUA), (k_best, hno.BLUE), (k_best <span class="op">+</span> <span class="dv">12</span>, hno.ORANGE)):</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    ax[<span class="dv">1</span>].plot(s, tsvd(U, sv, Vt, b, k), color<span class="op">=</span>col, lw<span class="op">=</span><span class="fl">1.3</span>, label<span class="op">=</span><span class="ss">f'$k$ = </span><span class="sc">{</span>k<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].set_ylim(<span class="op">-</span><span class="fl">0.5</span>, <span class="fl">4.2</span>)<span class="op">;</span> ax[<span class="dv">1</span>].set_title(<span class="st">'three TSVD solutions'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax[<span class="dv">1</span>].legend(loc<span class="op">=</span><span class="st">'upper left'</span>, fontsize<span class="op">=</span><span class="dv">8</span>, ncol<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>best k = 71 (error 0.044);   first coefficient within 3x of the noise floor: i = 59</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-tsvd" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-tsvd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05_svd_and_spectral_analysis_files/figure-html/fig-tsvd-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-tsvd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.3: Error of the truncated SVD against the number of terms, and three solutions.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The U-curve of notebook 1 (<a href="01_the_deblurring_problem.html#fig-ucurve" class="quarto-xref">Figure&nbsp;<span>1.5</span></a>) again, now explained term by term.</p>
+<ul>
+<li>Too few terms: only smooth patterns are allowed, and the steps of the signal are rounded off (<em>regularisation error</em>).</li>
+<li>Too many: noise-dominated terms enter with huge weights (<em>perturbation error</em>).</li>
+<li>The best <span class="math inline">\(k\)</span> sits close to where the Picard plot said the data hit the noise floor. <strong>You can read a good regularisation off the Picard plot without knowing the true signal.</strong></li>
+</ul>
+<p>Note what even the best solution cannot do: the steps stay rounded, with small oscillations next to them. Sharp steps need the fine patterns, and the data no longer contain them.</p>
+</section>
+<section id="two-dimensions-the-patterns-are-images" class="level2" data-number="5.4">
+<h2 data-number="5.4" class="anchored" data-anchor-id="two-dimensions-the-patterns-are-images"><span class="header-section-number">5.4</span> Two dimensions: the patterns are images</h2>
+<p>For an image, the singular vectors are images too. With a separable blur (notebook 4) they are products of the 1-D patterns: if <span class="math inline">\(A = A_c \otimes A_r\)</span>, its singular vectors are <span class="math inline">\(v^c_i \otimes v^r_j\)</span> and its singular values <span class="math inline">\(\sigma^c_i\, \sigma^r_j\)</span>. Here are a few of these <em>basis images</em>, for a Gaussian blur on a <span class="math inline">\(32 \times 32\)</span> image:</p>
+<div id="cell-fig-basis" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:02.884650Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:02.884552Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:02.954903Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:02.954403Z&quot;}}" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>n <span class="op">=</span> <span class="dv">32</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>A1 <span class="op">=</span> hno.blur_matrix_1d(hno.gaussian_kernel_1d(<span class="fl">1.5</span>, <span class="dv">5</span>), n)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>U1, s1, V1t <span class="op">=</span> np.linalg.svd(A1)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>pairs <span class="op">=</span> [(<span class="dv">0</span>, <span class="dv">0</span>), (<span class="dv">1</span>, <span class="dv">0</span>), (<span class="dv">1</span>, <span class="dv">2</span>), (<span class="dv">4</span>, <span class="dv">3</span>), (<span class="dv">9</span>, <span class="dv">9</span>), (<span class="dv">20</span>, <span class="dv">22</span>)]</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="bu">len</span>(pairs), figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="fl">2.4</span>))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> a, (i, j) <span class="kw">in</span> <span class="bu">zip</span>(ax, pairs):</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    a.imshow(np.outer(V1t[i], V1t[j]), cmap<span class="op">=</span><span class="st">'gray'</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    a.set_title(<span class="ss">f'$</span><span class="ch">\\</span><span class="ss">sigma$ = </span><span class="sc">{</span>s1[i] <span class="op">*</span> s1[j]<span class="sc">:.1e}</span><span class="ss">'</span>, fontsize<span class="op">=</span><span class="dv">9</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    a.set_xticks([])<span class="op">;</span> a.set_yticks([])<span class="op">;</span> a.grid(<span class="va">False</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-basis" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-basis-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05_svd_and_spectral_analysis_files/figure-html/fig-basis-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-basis-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.4: Six basis images of a separable Gaussian blur, with their singular values.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Same story as in 1-D: large singular values go with smooth images, small ones with fine checkerboards.</p>
+<p>With <strong>periodic</strong> boundaries we do not even need to compute an SVD. Notebook 4 showed that <span class="math inline">\(A\)</span> is diagonalised by the Fourier transform: the patterns are the sinusoids of each spatial frequency, and the singular values are the moduli of the transfer function,</p>
+<p><span class="math display">\[\sigma_i \;\longleftrightarrow\; |K(\nu)| .\]</span></p>
+<p>So for images, “index <span class="math inline">\(i\)</span>” becomes “spatial frequency <span class="math inline">\(\nu\)</span>”, and the Picard plot becomes the spectrum plot of notebook 1 (<a href="01_the_deblurring_problem.html#fig-spectrum" class="quarto-xref">Figure&nbsp;<span>1.4</span></a>). Here it is again in Picard form, the <span class="math inline">\(65\,536\)</span> frequencies sorted by decreasing <span class="math inline">\(|K|\)</span>:</p>
+<div id="cell-fig-picard-image" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:02.956322Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:02.956216Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:03.075456Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:03.075078Z&quot;}}" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>x_true <span class="op">=</span> data[<span class="st">'hubble'</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>psf <span class="op">=</span> hno.gaussian_psf(x_true.shape, fwhm<span class="op">=</span><span class="fl">6.0</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>K <span class="op">=</span> hno.psf2otf(psf)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>noise2 <span class="op">=</span> <span class="fl">0.005</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>B_exact <span class="op">=</span> fft2(hno.blur(x_true, psf))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> B_exact <span class="op">+</span> fft2(noise2 <span class="op">*</span> rng.standard_normal(x_true.shape))</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>order <span class="op">=</span> np.argsort(<span class="op">-</span>np.<span class="bu">abs</span>(K).ravel())</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> running_median(a, w<span class="op">=</span><span class="dv">400</span>):</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    a <span class="op">=</span> a[: <span class="bu">len</span>(a) <span class="op">//</span> w <span class="op">*</span> w].reshape(<span class="op">-</span><span class="dv">1</span>, w)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.median(a, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>i_axis <span class="op">=</span> running_median(np.arange(K.size, dtype<span class="op">=</span><span class="bu">float</span>))</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">7.5</span>, <span class="fl">3.6</span>))</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>ax.semilogy(i_axis, running_median(np.<span class="bu">abs</span>(K).ravel()[order]), color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">1.2</span>, ls<span class="op">=</span>(<span class="dv">0</span>, (<span class="dv">4</span>, <span class="dv">2</span>)), label<span class="op">=</span><span class="st">'$|K|$, sorted'</span>)</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>ax.semilogy(i_axis, running_median(np.<span class="bu">abs</span>(B_exact).ravel()[order]), color<span class="op">=</span>hno.AQUA, label<span class="op">=</span><span class="st">'exact data'</span>)</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>ax.semilogy(i_axis, running_median(np.<span class="bu">abs</span>(B).ravel()[order]), color<span class="op">=</span>hno.BLUE, label<span class="op">=</span><span class="st">'noisy data'</span>)</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="fl">1e-18</span>, <span class="fl">1e4</span>)<span class="op">;</span> ax.set_xlabel(<span class="st">'index (frequencies sorted by decreasing $|K|$)'</span>)</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Picard plot of the image problem of notebook 1'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax.legend(loc<span class="op">=</span><span class="st">'upper right'</span>)<span class="op">;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>usable <span class="op">=</span> <span class="bu">int</span>(np.<span class="bu">sum</span>(running_median(np.<span class="bu">abs</span>(B).ravel()[order]) <span class="op">&gt;</span> <span class="dv">2</span> <span class="op">*</span> np.median(np.<span class="bu">abs</span>(B).ravel()[order][<span class="op">-</span><span class="dv">20000</span>:])) <span class="op">*</span> <span class="dv">400</span>)</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'frequencies clearly above the noise floor: about </span><span class="sc">{</span>usable<span class="sc">}</span><span class="ss"> of </span><span class="sc">{</span>K<span class="sc">.</span>size<span class="sc">}</span><span class="ss">  (</span><span class="sc">{</span>usable <span class="op">/</span> K<span class="sc">.</span>size<span class="sc">:.1%}</span><span class="ss">)'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>frequencies clearly above the noise floor: about 2800 of 65536  (4.3%)</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-picard-image" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-picard-image-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05_svd_and_spectral_analysis_files/figure-html/fig-picard-image-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-picard-image-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.5: Picard plot of the image problem of chapter 1.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Out of 65 536 unknowns, the data determine a few thousand. Everything else in a deblurred image comes from the <em>method</em>, not from the data. This is the number to keep in mind when someone shows you a spectacularly sharp restoration.</p>
+</section>
+<section id="real-data-what-stacking-buys" class="level2" data-number="5.5">
+<h2 data-number="5.5" class="anchored" data-anchor-id="real-data-what-stacking-buys"><span class="header-section-number">5.5</span> Real data: what stacking buys</h2>
+<p>For real data there is no “exact” curve. But we can still draw the two things that matter: the spectrum of the image, and the spectrum of its noise, which we measure by differencing as in notebook 2. Where the first sinks into the second, the information ends.</p>
+<p>We do this for one exposure of our telescope and for the average of all 45, on a corner of the field that contains nebula but no bright star. (A star is a point, so its spectrum is flat and would hide what we want to see.)</p>
+<div id="cell-fig-stacking" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:03.076938Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:03.076852Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:03.203030Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:03.202499Z&quot;}}" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>cube <span class="op">=</span> data[<span class="st">'cube'</span>].astype(<span class="bu">float</span>)[:, <span class="dv">2</span>:<span class="dv">66</span>, <span class="dv">2</span>:<span class="dv">66</span>]            <span class="co"># a 64 x 64 star-free corner, 45 exposures</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>scale <span class="op">=</span> <span class="bu">float</span>(data[<span class="st">'pixel_scale'</span>])</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> taper(b, width<span class="op">=</span><span class="dv">8</span>):</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    ramp <span class="op">=</span> np.ones(b.shape[<span class="dv">0</span>])</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    ramp[:width] <span class="op">=</span> <span class="fl">0.5</span> <span class="op">-</span> <span class="fl">0.5</span> <span class="op">*</span> np.cos(np.pi <span class="op">*</span> np.arange(width) <span class="op">/</span> width)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    ramp[<span class="op">-</span>width:] <span class="op">=</span> ramp[:width][::<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> b.mean() <span class="op">+</span> (b <span class="op">-</span> b.mean()) <span class="op">*</span> np.outer(ramp, ramp)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>cases <span class="op">=</span> ((<span class="st">'one exposure'</span>, cube[<span class="dv">0</span>], (cube[<span class="dv">0</span>] <span class="op">-</span> cube[<span class="dv">1</span>]) <span class="op">/</span> np.sqrt(<span class="dv">2</span>), hno.ORANGE),</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>         (<span class="st">'mean of 45 exposures'</span>, cube.mean(axis<span class="op">=</span><span class="dv">0</span>), (cube[<span class="dv">0</span>::<span class="dv">2</span>].mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">-</span> cube[<span class="dv">1</span>::<span class="dv">2</span>].mean(axis<span class="op">=</span><span class="dv">0</span>)) <span class="op">/</span> <span class="dv">2</span>, hno.BLUE))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">7.5</span>, <span class="fl">3.8</span>))</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, img, noise_img, col <span class="kw">in</span> cases:</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    nu, spec <span class="op">=</span> hno.radial_profile(fft2(taper(img)))</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    _, nspec <span class="op">=</span> hno.radial_profile(fft2(taper(noise_img)))</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    knee <span class="op">=</span> nu[<span class="dv">1</span> <span class="op">+</span> np.argmax(spec[<span class="dv">1</span>:] <span class="op">&lt;</span> <span class="dv">2</span> <span class="op">*</span> nspec[<span class="dv">1</span>:])]</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    ax.semilogy(nu <span class="op">/</span> scale, spec, color<span class="op">=</span>col, label<span class="op">=</span>name)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    ax.semilogy(nu <span class="op">/</span> scale, nspec, color<span class="op">=</span>col, lw<span class="op">=</span><span class="fl">1.0</span>, ls<span class="op">=</span>(<span class="dv">0</span>, (<span class="dv">2</span>, <span class="dv">2</span>)))</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'</span><span class="sc">{</span>name<span class="sc">:22s}</span><span class="ss"> noise level </span><span class="sc">{</span>np<span class="sc">.</span>median(nspec[<span class="dv">5</span>:])<span class="sc">:.2e}</span><span class="ss">,  image within 2x of its noise from </span><span class="sc">{</span>knee <span class="op">/</span> scale<span class="sc">:.2f}</span><span class="ss"> cycles/arcsec'</span>)</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>ax.plot([], [], color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">1.0</span>, ls<span class="op">=</span>(<span class="dv">0</span>, (<span class="dv">2</span>, <span class="dv">2</span>)), label<span class="op">=</span><span class="st">'its noise (measured by differencing)'</span>)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'spatial frequency (cycles / arcsecond)'</span>)</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Spectrum of real images, and of their noise'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax.legend()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>one exposure           noise level 1.12e-02,  image within 2x of its noise from 0.10 cycles/arcsec
+mean of 45 exposures   noise level 1.65e-03,  image within 2x of its noise from 0.20 cycles/arcsec</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-stacking" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-stacking-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="05_svd_and_spectral_analysis_files/figure-html/fig-stacking-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-stacking-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5.6: Spectrum of one exposure and of the mean of 45 (solid lines), and of their noise (dotted lines).
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Averaging 45 exposures lowers the noise by a factor close to <span class="math inline">\(\sqrt{45} \approx 7\)</span> and leaves the signal where it was. The point where the image sinks into its noise moves from about 0.10 to about 0.20 cycles per arcsecond. In two dimensions, twice the radius means <strong>four times as many channels carrying information</strong>, so four times as much of the scene that can honestly be restored. No deblurring algorithm can do this; only more photons can.</p>
+<p>This is why our project never deblurs single exposures. Notebook 8 shows how to combine them so that not one of these newly usable channels is wasted.</p>
+</section>
+<section id="your-turn" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="your-turn">Your turn</h2>
+<ol type="1">
+<li><strong>Counting sign changes.</strong> For the 1-D problem, count the sign changes of <span class="math inline">\(v_i\)</span> for <span class="math inline">\(i = 1, \dots, 60\)</span> and plot the count against <span class="math inline">\(i\)</span>. What simple law do you find?</li>
+<li><strong>More noise, fewer channels.</strong> Redo sections 5.2 and 5.3 with noise <span class="math inline">\(10^{-2}\)</span> and <span class="math inline">\(10^{-6}\)</span>. Tabulate the noise level, the index where the coefficients reach the floor, and the best <span class="math inline">\(k\)</span>. How many channels does a factor 100 in noise cost?</li>
+<li><strong>A wider blur.</strong> Replace the kernel by <code>hno.gaussian_kernel_1d(8.0, 80)</code>. What happens to the singular values, and to the best <span class="math inline">\(k\)</span>?</li>
+<li><strong>A kernel cut short.</strong> Use the kernel of notebook 1, <code>hno.gaussian_kernel_1d(4.0, 12)</code>, which stops at 25 samples. The singular values now stall on a plateau near <span class="math inline">\(10^{-3}\)</span>. Why? (Cutting a kernel multiplies it by a box; what does that do to its Fourier transform?) Is the problem easier or harder to invert, and is that good news?</li>
+<li><strong>Picard violated.</strong> Take <span class="math inline">\(b\)</span> = pure noise (no signal at all) and draw its Picard plot. How would you recognise, on real data, that an image contains nothing but noise?</li>
+<li><strong>2-D basis images.</strong> In section 5.4, reconstruct the top-left <span class="math inline">\(32 \times 32\)</span> corner of <code>x_true</code> from only the 100 basis images with the largest <span class="math inline">\(\sigma^c_i \sigma^r_j\)</span>. (Hint: the coefficients are <code>V1t @ X @ V1t.T</code>.) What is lost?</li>
+<li><strong>How many exposures?</strong> From section 5.5, estimate how many exposures would be needed to push that point to 0.4 cycles per arcsecond. Is it a realistic observing programme?</li>
+</ol>
+</section>
+<section id="where-to-read-more" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="where-to-read-more">Where to read more</h2>
+<ul>
+<li><span class="citation" data-cites="hansen2006">Hansen et al. (<a href="../references.html#ref-hansen2006" role="doc-biblioref">2006</a>)</span>, chapter 5.</li>
+<li><span class="citation" data-cites="talbot2024">Talbot (<a href="../references.html#ref-talbot2024" role="doc-biblioref">2024</a>)</span>, section 2.2, on conditioning.</li>
+<li>For the SVD itself: <span class="citation" data-cites="strang2016">Strang (<a href="../references.html#ref-strang2016" role="doc-biblioref">2016</a>)</span>, the chapter on the singular value decomposition.</li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-hansen2006" class="csl-entry" role="listitem">
+Hansen, Per Christian, James G. Nagy, and Dianne P. O’Leary. 2006. <em>Deblurring Images: Matrices, Spectra, and Filtering</em>. SIAM. <a href="https://doi.org/10.1137/1.9780898718874">https://doi.org/10.1137/1.9780898718874</a>.
+</div>
+<div id="ref-strang2016" class="csl-entry" role="listitem">
+Strang, Gilbert. 2016. <em>Introduction to Linear Algebra</em>. 5th ed. Wellesley-Cambridge Press.
+</div>
+<div id="ref-talbot2024" class="csl-entry" role="listitem">
+Talbot, Hugues. 2024. <span>“Lecture Notes on Optimisation: Applications to Computer Vision, Image and Signal Processing, and Machine Learning.”</span> Unpublished manuscript.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/hugues-talbot\.github\.io\/files\/teaching\/deblurring\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/04_structured_computations.html" class="pagination-link" aria-label="Structured computations">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Structured computations</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../chapters/06_regularisation_by_filtering.html" class="pagination-link" aria-label="Regularisation by spectral filtering">
+        <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

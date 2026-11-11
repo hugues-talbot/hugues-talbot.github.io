@@ -1,0 +1,1 @@
+Sitemap: https://hugues-talbot.github.io/files/teaching/deblurring/sitemap.xml

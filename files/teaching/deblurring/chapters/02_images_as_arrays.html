@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>2&nbsp; Images as arrays – Deblurring images, in Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../chapters/03_the_blurring_function.html" rel="next">
+<link href="../chapters/01_the_deblurring_problem.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-bf8541b1296accc9344c8d492b94c564.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/01_the_deblurring_problem.html">The book, chapter by chapter</a></li><li class="breadcrumb-item"><a href="../chapters/02_images_as_arrays.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Deblurring images, in Python</a> 
+        <div class="sidebar-tools-main">
+    <a href="../deblurring-images-in-python.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">The book, chapter by chapter</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01_the_deblurring_problem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The image deblurring problem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02_images_as_arrays.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03_the_blurring_function.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">The blurring function</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04_structured_computations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Structured computations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05_svd_and_spectral_analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06_regularisation_by_filtering.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07_colour_and_smoothing_norms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Colour images and smoothing norms</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Towards the research project</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/08_from_one_frame_to_many.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/09_iterative_methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Iterative methods: when there is no closed form</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hnotools_listing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">The helper module <code>hnotools.py</code></span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#an-image-is-an-array" id="toc-an-image-is-an-array" class="nav-link active" data-scroll-target="#an-image-is-an-array"><span class="header-section-number">2.1</span> An image is an array</a></li>
+  <li><a href="#what-you-see-is-not-what-you-have" id="toc-what-you-see-is-not-what-you-have" class="nav-link" data-scroll-target="#what-you-see-is-not-what-you-have"><span class="header-section-number">2.2</span> What you see is not what you have</a></li>
+  <li><a href="#data-types-integers-lie" id="toc-data-types-integers-lie" class="nav-link" data-scroll-target="#data-types-integers-lie"><span class="header-section-number">2.3</span> Data types: integers lie</a></li>
+  <li><a href="#arithmetic-on-images" id="toc-arithmetic-on-images" class="nav-link" data-scroll-target="#arithmetic-on-images"><span class="header-section-number">2.4</span> Arithmetic on images</a></li>
+  <li><a href="#colour-images" id="toc-colour-images" class="nav-link" data-scroll-target="#colour-images"><span class="header-section-number">2.5</span> Colour images</a></li>
+  <li><a href="#your-turn" id="toc-your-turn" class="nav-link" data-scroll-target="#your-turn">Your turn</a></li>
+  <li><a href="#where-to-read-more" id="toc-where-to-read-more" class="nav-link" data-scroll-target="#where-to-read-more">Where to read more</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/01_the_deblurring_problem.html">The book, chapter by chapter</a></li><li class="breadcrumb-item"><a href="../chapters/02_images_as_arrays.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><em>Companion notebook to Hansen, Nagy &amp; O’Leary, <strong>Deblurring Images</strong>, chapter 2. The chapter shows how to handle images in MATLAB. This notebook covers the same ground with NumPy, and you can read it instead of the chapter.</em></p>
+<p><strong>What you will take away</strong></p>
+<ol type="1">
+<li>An image is an array of numbers. Its shape, its data type and its index order are things you must always know.</li>
+<li><strong>Displaying an image and computing with it are different jobs.</strong> What you see on screen has been stretched; the numbers must stay untouched.</li>
+<li>Integer types silently give wrong answers. Convert to floating point first.</li>
+<li>Simple arithmetic on images already does useful science: averaging, differencing, measuring noise, masking.</li>
+</ol>
+<div id="d05f5b78" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:03.650213Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:03.650138Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.033465Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.032941Z&quot;}}" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os, tempfile</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> hnotools <span class="im">as</span> hno</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>hno.style()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> hno.load_sample()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="an-image-is-an-array" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="an-image-is-an-array"><span class="header-section-number">2.1</span> An image is an array</h2>
+<p>Our working image is the average of 45 five-minute exposures of the Pillars of Creation through an oxygen filter, taken with a 14 cm refractor.</p>
+<div id="ddb90322" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.034986Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.034877Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.038494Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.037969Z&quot;}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>img <span class="op">=</span> data[<span class="st">'mean'</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'type :'</span>, <span class="bu">type</span>(img).<span class="va">__name__</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'shape:'</span>, img.shape, <span class="st">' (rows, columns)'</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'dtype:'</span>, img.dtype)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'values from </span><span class="sc">{</span>img<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.4f}</span><span class="ss"> to </span><span class="sc">{</span>img<span class="sc">.</span><span class="bu">max</span>()<span class="sc">:.4f}</span><span class="ss">, median </span><span class="sc">{</span>np<span class="sc">.</span>median(img)<span class="sc">:.5f}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>type : ndarray
+shape: (256, 256)  (rows, columns)
+dtype: float64
+values from -0.0003 to 0.6288, median 0.00075</code></pre>
+</div>
+</div>
+<p>Three conventions to fix in your mind, because every bug in image code comes from one of them.</p>
+<ul>
+<li><strong>Index order is <code>[row, column]</code></strong>, that is <code>[y, x]</code>, not <code>[x, y]</code>.</li>
+<li><strong>Row 0 is at the top</strong> when displayed, as in a matrix, not at the bottom as on a graph.</li>
+<li><strong>Slices are half-open</strong>: <code>img[100:160]</code> takes rows 100 to 159.</li>
+</ul>
+<p>Cropping is slicing:</p>
+<div id="cell-fig-crop" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.039719Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.039629Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.127143Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.126743Z&quot;}}" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>crop <span class="op">=</span> img[<span class="dv">131</span>:<span class="dv">191</span>, <span class="dv">138</span>:<span class="dv">198</span>]                 <span class="co"># 60 rows, 60 columns around a bright star</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>row, col <span class="op">=</span> np.unravel_index(np.argmax(crop), crop.shape)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'crop shape:'</span>, crop.shape, <span class="st">'  brightest pixel at row'</span>, row, <span class="st">'column'</span>, col, <span class="st">'of the crop'</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>hno.show([img, crop], [<span class="st">'the whole image'</span>, <span class="st">'img[131:191, 138:198]'</span>], width<span class="op">=</span><span class="fl">3.4</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>crop shape: (60, 60)   brightest pixel at row 21 column 12 of the crop</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-crop" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-crop-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="02_images_as_arrays_files/figure-html/fig-crop-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-crop-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.1: The mean of 45 exposures, and a crop obtained by slicing.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>A slice is a <strong>view</strong>, not a copy: modifying <code>crop</code> would modify <code>img</code>. Write <code>img[131:191, 138:198].copy()</code> when you want an independent array.</p>
+</section>
+<section id="what-you-see-is-not-what-you-have" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="what-you-see-is-not-what-you-have"><span class="header-section-number">2.2</span> What you see is not what you have</h2>
+<p><code>hno.show</code> made the nebula visible. Here is the same array displayed honestly, black for the smallest value and white for the largest:</p>
+<div id="cell-fig-linear" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.128532Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.128446Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.422579Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.422150Z&quot;}}" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">9</span>, <span class="fl">3.6</span>), gridspec_kw<span class="op">=</span>{<span class="st">'width_ratios'</span>: [<span class="dv">1</span>, <span class="fl">1.5</span>]})</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].imshow(img, vmin<span class="op">=</span>img.<span class="bu">min</span>(), vmax<span class="op">=</span>img.<span class="bu">max</span>())<span class="op">;</span> ax[<span class="dv">0</span>].grid(<span class="va">False</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].set_xticks([])<span class="op">;</span> ax[<span class="dv">0</span>].set_yticks([])<span class="op">;</span> ax[<span class="dv">0</span>].set_title(<span class="st">'linear display, min to max'</span>)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].hist(img.ravel(), bins<span class="op">=</span><span class="dv">200</span>, color<span class="op">=</span>hno.BLUE, log<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].set_xlabel(<span class="st">'pixel value'</span>)<span class="op">;</span> ax[<span class="dv">1</span>].set_ylabel(<span class="st">'number of pixels'</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].set_title(<span class="st">'histogram of the pixel values'</span>, loc<span class="op">=</span><span class="st">'left'</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>p1, p99 <span class="op">=</span> np.percentile(img, [<span class="dv">1</span>, <span class="dv">99</span>])</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'99 % of the pixels lie between </span><span class="sc">{</span>p1<span class="sc">:.4f}</span><span class="ss"> and </span><span class="sc">{</span>p99<span class="sc">:.4f}</span><span class="ss">: </span><span class="sc">{</span>(p99 <span class="op">-</span> p1) <span class="op">/</span> (img.<span class="bu">max</span>() <span class="op">-</span> img.<span class="bu">min</span>())<span class="sc">:.1%}</span><span class="ss"> of the full range'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>99 % of the pixels lie between -0.0001 and 0.0029: 0.5% of the full range</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-linear" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-linear-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="02_images_as_arrays_files/figure-html/fig-linear-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-linear-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.2: The same image displayed linearly from its minimum to its maximum, and the histogram of its values.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Two stars and nothing else. The nebula is all there, but it occupies less than one percent of the range of values, squeezed against zero. Astronomical images have an enormous <strong>dynamic range</strong>, and a screen does not.</p>
+<p>To look at such an image we <strong>stretch</strong> it: we choose which values become black and white, and how the values in between are spread. Three common choices:</p>
+<div id="cell-fig-stretch" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.424243Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.424128Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.501293Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.500863Z&quot;}}" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> stretch(a, lo, hi, kind<span class="op">=</span><span class="st">'linear'</span>):</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Map values lo..hi to 0..1 for display. Returns a NEW array."""</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    z <span class="op">=</span> np.clip((a <span class="op">-</span> lo) <span class="op">/</span> (hi <span class="op">-</span> lo), <span class="dv">0</span>, <span class="dv">1</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> kind <span class="op">==</span> <span class="st">'sqrt'</span>:</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        z <span class="op">=</span> np.sqrt(z)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> kind <span class="op">==</span> <span class="st">'asinh'</span>:</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        z <span class="op">=</span> np.arcsinh(<span class="dv">30</span> <span class="op">*</span> z) <span class="op">/</span> np.arcsinh(<span class="dv">30</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> z</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>lo, hi <span class="op">=</span> np.percentile(img, [<span class="dv">1</span>, <span class="fl">99.9</span>])</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">3</span>, figsize<span class="op">=</span>(<span class="dv">10</span>, <span class="fl">3.6</span>))</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> a, kind <span class="kw">in</span> <span class="bu">zip</span>(ax, (<span class="st">'linear'</span>, <span class="st">'sqrt'</span>, <span class="st">'asinh'</span>)):</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    a.imshow(stretch(img, lo, hi, kind), vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">1</span>)<span class="op">;</span> a.grid(<span class="va">False</span>)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    a.set_xticks([])<span class="op">;</span> a.set_yticks([])<span class="op">;</span> a.set_title(<span class="ss">f'percentiles 1 to 99.9, </span><span class="sc">{</span>kind<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-stretch" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-stretch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="02_images_as_arrays_files/figure-html/fig-stretch-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-stretch-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.3: Three stretches of the same array.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The three panels show <strong>the same array</strong>. None is more “true” than the others. The stretch is a choice made for the eye, and it should never leak into the numbers.</p>
+<section id="why-it-matters-measure-a-star-on-stretched-data-and-you-are-wrong" class="level3">
+<h3 class="anchored" data-anchor-id="why-it-matters-measure-a-star-on-stretched-data-and-you-are-wrong">Why it matters: measure a star on stretched data and you are wrong</h3>
+<p>The width of a star image, its <em>full width at half maximum</em> (FWHM), is the standard measure of sharpness. Let us measure it on a synthetic star whose width we know, before and after a square-root stretch.</p>
+<div id="1ce5ff83" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.503220Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.503129Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.510150Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.509830Z&quot;}}" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fwhm_by_area(a):</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""FWHM of a single round blob: diameter of the disc of pixels above half maximum."""</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="dv">2</span> <span class="op">*</span> np.sqrt(np.<span class="bu">sum</span>(a <span class="op">&gt;=</span> <span class="fl">0.5</span> <span class="op">*</span> a.<span class="bu">max</span>()) <span class="op">/</span> np.pi)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>star <span class="op">=</span> hno.moffat_psf((<span class="dv">513</span>, <span class="dv">513</span>), <span class="fl">40.0</span>, beta<span class="op">=</span><span class="fl">2.5</span>)       <span class="co"># a wide star, so that pixels are small</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'true FWHM            : 40.0'</span>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'measured, linear data: </span><span class="sc">{</span>fwhm_by_area(star)<span class="sc">:.1f}</span><span class="ss">'</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'measured, sqrt data  : </span><span class="sc">{</span>fwhm_by_area(np.sqrt(star))<span class="sc">:.1f}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>true FWHM            : 40.0
+measured, linear data: 40.0
+measured, sqrt data  : 60.9</code></pre>
+</div>
+</div>
+<p>Fifty percent too wide. The half maximum of the stretched star is not the half maximum of the star. An early version of our own study compared two telescopes on stretched images and got widths wrong by a factor of two; the mistake was found only when the measurement was redone on linear data.</p>
+<p><strong>Rule: stretch for the eye, compute on the linear data.</strong></p>
+</section>
+</section>
+<section id="data-types-integers-lie" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="data-types-integers-lie"><span class="header-section-number">2.3</span> Data types: integers lie</h2>
+<p>Image files usually store integers: 8 bits (0 to 255) for ordinary pictures, 16 bits (0 to 65 535) for cameras. NumPy keeps that type when it reads them, and integer arithmetic <strong>wraps around without warning</strong>:</p>
+<div id="09720ef5" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.511483Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.511395Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.513461Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.513166Z&quot;}}" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>a <span class="op">=</span> np.array([<span class="dv">200</span>, <span class="dv">100</span>, <span class="dv">50</span>], dtype<span class="op">=</span>np.uint8)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> np.array([<span class="dv">100</span>, <span class="dv">100</span>, <span class="dv">100</span>], dtype<span class="op">=</span>np.uint8)</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'a + b ='</span>, a <span class="op">+</span> b, <span class="st">'   (200 + 100 should be 300)'</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'a - b ='</span>, a <span class="op">-</span> b, <span class="st">'   (50 - 100 should be -50)'</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'as floats:'</span>, a.astype(<span class="bu">float</span>) <span class="op">+</span> b, a.astype(<span class="bu">float</span>) <span class="op">-</span> b)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>a + b = [ 44 200 150]    (200 + 100 should be 300)
+a - b = [100   0 206]    (50 - 100 should be -50)
+as floats: [300. 200. 150.] [100.   0. -50.]</code></pre>
+</div>
+</div>
+<p>No error, no warning, wrong numbers. <strong>Convert to floating point as soon as you have read an image</strong>: <code>img = img.astype(float)</code>.</p>
+<p>The second danger of integers is <strong>quantisation</strong>. Let us save our image as an 8-bit PNG, as one would for a web page, and read it back.</p>
+<div id="cell-fig-8bit" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.514660Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.514583Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.569523Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.569093Z&quot;}}" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>tmp <span class="op">=</span> os.path.join(tempfile.mkdtemp(), <span class="st">'nebula.png'</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>plt.imsave(tmp, img, cmap<span class="op">=</span><span class="st">'gray'</span>, vmin<span class="op">=</span>img.<span class="bu">min</span>(), vmax<span class="op">=</span>img.<span class="bu">max</span>())     <span class="co"># linear, 8 bits</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>back <span class="op">=</span> plt.imread(tmp)[:, :, <span class="dv">0</span>].astype(<span class="bu">float</span>)                         <span class="co"># values k/255</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>back <span class="op">=</span> back <span class="op">*</span> (img.<span class="bu">max</span>() <span class="op">-</span> img.<span class="bu">min</span>()) <span class="op">+</span> img.<span class="bu">min</span>()                     <span class="co"># same units as img</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>levels <span class="op">=</span> (p99 <span class="op">-</span> p1) <span class="op">/</span> (img.<span class="bu">max</span>() <span class="op">-</span> img.<span class="bu">min</span>()) <span class="op">*</span> <span class="dv">255</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'the nebula (99 % of the pixels) spans </span><span class="sc">{</span>levels<span class="sc">:.1f}</span><span class="ss"> grey levels out of 255'</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>hno.show([img, back], [<span class="st">'original, floating point'</span>, <span class="st">'after an 8-bit round trip'</span>], width<span class="op">=</span><span class="fl">3.6</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>the nebula (99 % of the pixels) spans 1.2 grey levels out of 255</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-8bit" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-8bit-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="02_images_as_arrays_files/figure-html/fig-8bit-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-8bit-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.4: The image before and after being saved as an 8-bit file.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The whole nebula had to fit in about one grey level, and it is gone. This is why astronomers store images as 16-bit or floating-point <strong>FITS</strong> files, never as PNG or JPEG. (In Python, FITS files are read with the <code>astropy</code> package; our sample is stored as a NumPy <code>.npz</code> archive to keep the setup small.)</p>
+</section>
+<section id="arithmetic-on-images" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="arithmetic-on-images"><span class="header-section-number">2.4</span> Arithmetic on images</h2>
+<p>With floating-point arrays, image arithmetic is array arithmetic. Three examples that we will use again and again.</p>
+<p><strong>Averaging exposures.</strong> <code>data['cube']</code> holds all 45 exposures of the central part of the field, as an array of shape <code>(45, 128, 128)</code>.</p>
+<div id="cell-fig-one-vs-mean" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.570883Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.570798Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.608719Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.608305Z&quot;}}" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>cube <span class="op">=</span> data[<span class="st">'cube'</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>one <span class="op">=</span> cube[<span class="dv">0</span>]</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>mean45 <span class="op">=</span> cube.mean(axis<span class="op">=</span><span class="dv">0</span>)                   <span class="co"># average along the first axis: over the exposures</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>hno.show([one, mean45], [<span class="st">'one exposure'</span>, <span class="st">'mean of 45'</span>], same_scale<span class="op">=</span><span class="va">True</span>, width<span class="op">=</span><span class="fl">3.4</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-one-vs-mean" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-one-vs-mean-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="02_images_as_arrays_files/figure-html/fig-one-vs-mean-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-one-vs-mean-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.5: One exposure and the mean of 45, on the same display scale.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Measuring noise by differencing.</strong> The sky does not change between two exposures, so their difference contains no sky: only noise. If each exposure has noise <span class="math inline">\(\sigma\)</span>, the difference has noise <span class="math inline">\(\sigma\sqrt{2}\)</span>.</p>
+<p>The same trick measures the noise of the <em>average</em>: split the exposures in two halves, average each, and take half the difference of the two averages.</p>
+<p>We estimate the spread with the <strong>median absolute deviation</strong> (MAD) rather than the standard deviation, because stars are not noise and a few bright pixels would dominate a standard deviation.</p>
+<div id="c1d0e98f" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.610146Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.610052Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.613257Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.612829Z&quot;}}" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> robust_sigma(a):</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Standard deviation estimated from the median absolute deviation."""</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fl">1.4826</span> <span class="op">*</span> np.median(np.<span class="bu">abs</span>(a <span class="op">-</span> np.median(a)))</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>sigma_one <span class="op">=</span> robust_sigma(cube[<span class="dv">0</span>] <span class="op">-</span> cube[<span class="dv">1</span>]) <span class="op">/</span> np.sqrt(<span class="dv">2</span>)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>sigma_mean <span class="op">=</span> robust_sigma(cube[<span class="dv">0</span>::<span class="dv">2</span>].mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">-</span> cube[<span class="dv">1</span>::<span class="dv">2</span>].mean(axis<span class="op">=</span><span class="dv">0</span>)) <span class="op">/</span> <span class="dv">2</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'noise of one exposure : </span><span class="sc">{</span>sigma_one<span class="sc">:.2e}</span><span class="ss">'</span>)</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'noise of the mean     : </span><span class="sc">{</span>sigma_mean<span class="sc">:.2e}</span><span class="ss">'</span>)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'ratio                 : </span><span class="sc">{</span>sigma_one <span class="op">/</span> sigma_mean<span class="sc">:.1f}</span><span class="ss">    (sqrt(45) = </span><span class="sc">{</span>np<span class="sc">.</span>sqrt(<span class="dv">45</span>)<span class="sc">:.1f}</span><span class="ss">)'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>noise of one exposure : 2.69e-04
+noise of the mean     : 4.01e-05
+ratio                 : 6.7    (sqrt(45) = 6.7)</code></pre>
+</div>
+</div>
+<p>Averaging <span class="math inline">\(N\)</span> exposures divides the noise by about <span class="math inline">\(\sqrt{N}\)</span>. This is the whole reason for taking many exposures, and this “split in two halves” test is how our project puts error bars on its results.</p>
+<p><strong>Masks.</strong> A comparison gives an array of booleans, which selects pixels.</p>
+<div id="c87d351d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.614356Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.614284Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.616304Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.615938Z&quot;}}" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>saturated <span class="op">=</span> one <span class="op">&gt;</span> <span class="fl">0.5</span> <span class="op">*</span> one.<span class="bu">max</span>()            <span class="co"># the camera clipped these pixels</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'saturated pixels in this exposure:'</span>, saturated.<span class="bu">sum</span>())</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'median of the sky, stars excluded: </span><span class="sc">{</span>np<span class="sc">.</span>median(one[<span class="op">~</span>saturated])<span class="sc">:.2e}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>saturated pixels in this exposure: 5
+median of the sky, stars excluded: 9.12e-04</code></pre>
+</div>
+</div>
+</section>
+<section id="colour-images" class="level2" data-number="2.5">
+<h2 data-number="2.5" class="anchored" data-anchor-id="colour-images"><span class="header-section-number">2.5</span> Colour images</h2>
+<p>A colour image is three images stacked along a third axis: shape <code>(rows, columns, 3)</code>, in the order red, green, blue.</p>
+<p>Our telescope camera is monochrome. We photograph the nebula three times through narrow filters that isolate the light of sulphur (S II), hydrogen (H<span class="math inline">\(\alpha\)</span>) and oxygen (O III), and <em>assign</em> them to red, green and blue. This is the “Hubble palette” of the famous picture.</p>
+<div id="cell-fig-sho" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:38:04.617402Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:38:04.617328Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:38:04.711741Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:38:04.711240Z&quot;}}" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>sho <span class="op">=</span> data[<span class="st">'mean_sho'</span>].astype(<span class="bu">float</span>)         <span class="co"># shape (3, 256, 256): S II, H-alpha, O III</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'stored as'</span>, sho.shape)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>rgb <span class="op">=</span> np.stack([stretch(c, <span class="op">*</span>np.percentile(c, [<span class="dv">1</span>, <span class="fl">99.8</span>]), <span class="st">'asinh'</span>) <span class="cf">for</span> c <span class="kw">in</span> sho], axis<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'for display'</span>, rgb.shape, <span class="st">' values'</span>, rgb.<span class="bu">min</span>(), <span class="st">'to'</span>, rgb.<span class="bu">max</span>())</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">4</span>, figsize<span class="op">=</span>(<span class="dv">12</span>, <span class="fl">3.3</span>))</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> a, c, name <span class="kw">in</span> <span class="bu">zip</span>(ax, sho, (<span class="st">'S II  (red)'</span>, <span class="st">'Hα  (green)'</span>, <span class="st">'O III  (blue)'</span>)):</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>    a.imshow(stretch(c, <span class="op">*</span>np.percentile(c, [<span class="dv">1</span>, <span class="fl">99.8</span>]), <span class="st">'asinh'</span>), vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">1</span>)<span class="op">;</span> a.set_title(name)</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">3</span>].imshow(rgb)<span class="op">;</span> ax[<span class="dv">3</span>].set_title(<span class="st">'colour composite'</span>)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> a <span class="kw">in</span> ax:</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    a.set_xticks([])<span class="op">;</span> a.set_yticks([])<span class="op">;</span> a.grid(<span class="va">False</span>)</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>stored as (3, 256, 256)
+for display (256, 256, 3)  values 0.0 to 1.0</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-sho" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-sho-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="02_images_as_arrays_files/figure-html/fig-sho-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sho-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2.6: The three narrowband channels and their colour composite.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><code>imshow</code> expects a colour array of floats between 0 and 1, which is why each channel was stretched separately before stacking. The result is green almost everywhere, because hydrogen is by far the brightest gas in this nebula. Published pictures rebalance the three channels to taste: the colours are a display choice too. Chapter 7 comes back to colour, where each channel has its own blur.</p>
+</section>
+<section id="your-turn" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="your-turn">Your turn</h2>
+<ol type="1">
+<li><strong>Index order.</strong> Without running it, say what <code>img[10, 200]</code>, <code>img[:, 0]</code> and <code>img[::2, ::2]</code> are. Check the shape of each.</li>
+<li><strong>View or copy?</strong> Set <code>c = img[0:5, 0:5]</code>, then <code>c[:] = 0</code>. Look at <code>img[0, 0]</code>. Reload the data and repeat with <code>.copy()</code>.</li>
+<li><strong>Sixteen bits.</strong> In section 2.3, how many levels would the nebula get in a 16-bit file? Compare that step with the noise of one exposure measured in section 2.4. Is 16 bits enough for a single exposure? For the mean of 45?</li>
+<li><strong>Stretch and width.</strong> Redo the star measurement of section 2.2 with the <code>asinh</code> stretch. Then explain, with the formula of the Moffat profile in <code>hnotools.py</code>, why the square-root stretch gives exactly this factor.</li>
+<li><strong>Noise in practice.</strong> Compute <code>robust_sigma(cube[i] - cube[i + 1])</code> for all consecutive pairs and plot it against <code>i</code>. Did every exposure have the same noise? What could make one night noisier than another?</li>
+</ol>
+</section>
+<section id="where-to-read-more" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="where-to-read-more">Where to read more</h2>
+<ul>
+<li><span class="citation" data-cites="hansen2006">Hansen et al. (<a href="../references.html#ref-hansen2006" role="doc-biblioref">2006</a>)</span>, chapter 2, for the same ideas in MATLAB.</li>
+<li><span class="citation" data-cites="gonzalez2018">Gonzalez and Woods (<a href="../references.html#ref-gonzalez2018" role="doc-biblioref">2018</a>)</span>, chapter 2 (sampling, quantisation, arithmetic on images) and section 3.2 (intensity transformations, which is what a stretch is).</li>
+<li>The NumPy user guide, “Indexing on ndarrays” and “Copies and views”.</li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-gonzalez2018" class="csl-entry" role="listitem">
+Gonzalez, Rafael C., and Richard E. Woods. 2018. <em>Digital Image Processing</em>. 4th ed. Pearson.
+</div>
+<div id="ref-hansen2006" class="csl-entry" role="listitem">
+Hansen, Per Christian, James G. Nagy, and Dianne P. O’Leary. 2006. <em>Deblurring Images: Matrices, Spectra, and Filtering</em>. SIAM. <a href="https://doi.org/10.1137/1.9780898718874">https://doi.org/10.1137/1.9780898718874</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/hugues-talbot\.github\.io\/files\/teaching\/deblurring\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/01_the_deblurring_problem.html" class="pagination-link" aria-label="The image deblurring problem">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The image deblurring problem</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../chapters/03_the_blurring_function.html" class="pagination-link" aria-label="The blurring function">
+        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">The blurring function</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

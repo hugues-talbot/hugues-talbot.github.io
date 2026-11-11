@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>8&nbsp; From one frame to many: proper coaddition – Deblurring images, in Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../chapters/09_iterative_methods.html" rel="next">
+<link href="../chapters/07_colour_and_smoothing_norms.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-bf8541b1296accc9344c8d492b94c564.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/08_from_one_frame_to_many.html">Towards the research project</a></li><li class="breadcrumb-item"><a href="../chapters/08_from_one_frame_to_many.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Deblurring images, in Python</a> 
+        <div class="sidebar-tools-main">
+    <a href="../deblurring-images-in-python.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">The book, chapter by chapter</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01_the_deblurring_problem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The image deblurring problem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02_images_as_arrays.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03_the_blurring_function.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">The blurring function</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04_structured_computations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Structured computations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05_svd_and_spectral_analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06_regularisation_by_filtering.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07_colour_and_smoothing_norms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Colour images and smoothing norms</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Towards the research project</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/08_from_one_frame_to_many.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/09_iterative_methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Iterative methods: when there is no closed form</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hnotools_listing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">The helper module <code>hnotools.py</code></span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#forty-five-exposures-forty-five-psfs" id="toc-forty-five-exposures-forty-five-psfs" class="nav-link active" data-scroll-target="#forty-five-exposures-forty-five-psfs"><span class="header-section-number">8.1</span> Forty-five exposures, forty-five PSFs</a></li>
+  <li><a href="#the-model-and-its-solution" id="toc-the-model-and-its-solution" class="nav-link" data-scroll-target="#the-model-and-its-solution"><span class="header-section-number">8.2</span> The model and its solution</a></li>
+  <li><a href="#a-controlled-experiment" id="toc-a-controlled-experiment" class="nav-link" data-scroll-target="#a-controlled-experiment"><span class="header-section-number">8.3</span> A controlled experiment</a></li>
+  <li><a href="#where-the-gain-comes-from" id="toc-where-the-gain-comes-from" class="nav-link" data-scroll-target="#where-the-gain-comes-from"><span class="header-section-number">8.4</span> Where the gain comes from</a></li>
+  <li><a href="#the-real-exposures" id="toc-the-real-exposures" class="nav-link" data-scroll-target="#the-real-exposures"><span class="header-section-number">8.5</span> The real exposures</a></li>
+  <li><a href="#the-weak-point-every-exposure-is-trusted" id="toc-the-weak-point-every-exposure-is-trusted" class="nav-link" data-scroll-target="#the-weak-point-every-exposure-is-trusted"><span class="header-section-number">8.6</span> The weak point: every exposure is trusted</a></li>
+  <li><a href="#your-turn" id="toc-your-turn" class="nav-link" data-scroll-target="#your-turn">Your turn</a></li>
+  <li><a href="#where-to-read-more" id="toc-where-to-read-more" class="nav-link" data-scroll-target="#where-to-read-more">Where to read more</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/08_from_one_frame_to_many.html">Towards the research project</a></li><li class="breadcrumb-item"><a href="../chapters/08_from_one_frame_to_many.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><em>This notebook has no chapter in Hansen, Nagy &amp; O’Leary. It applies everything the book taught to the situation of every astronomer: not one blurred image, but many, each with its own blur. It is the starting point of our research project. Reference: B. Zackay &amp; E. Ofek, “How to COADD images. II”, The Astrophysical Journal 836, 188 (2017).</em></p>
+<p><strong>What you will take away</strong></p>
+<ol type="1">
+<li>With <span class="math inline">\(N\)</span> exposures of the same sky, the least-squares problem still has a closed-form solution, and it costs one FFT per exposure.</li>
+<li>That solution <strong>stacks and deblurs in one step</strong>. It is not the same as averaging first and deblurring afterwards, and it is never worse.</li>
+<li>The gain comes from the exposures being <em>different</em>: each one is trusted at the spatial frequencies where it is good. No exposure is thrown away.</li>
+<li>How much is gained can be computed in advance from the PSFs alone.</li>
+<li>The estimator trusts every exposure blindly. One defective exposure contaminates the result: this is where the project begins.</li>
+</ol>
+<div id="d9203944" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:16.355221Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:16.355004Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:16.582533Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:16.582039Z&quot;}}" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> numpy.fft <span class="im">import</span> fft2, ifft2, fftfreq</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> hnotools <span class="im">as</span> hno</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>hno.style()</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> hno.load_sample()</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>scale <span class="op">=</span> <span class="bu">float</span>(data[<span class="st">'pixel_scale'</span>])                     <span class="co"># arcseconds per pixel</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="forty-five-exposures-forty-five-psfs" class="level2" data-number="8.1">
+<h2 data-number="8.1" class="anchored" data-anchor-id="forty-five-exposures-forty-five-psfs"><span class="header-section-number">8.1</span> Forty-five exposures, forty-five PSFs</h2>
+<p><code>data['cube']</code> holds 45 exposures of five minutes each, taken on several nights. <code>data['all_psf']</code> holds, for each one, the PSF measured on its stars (notebook 3), the small registration error left after aligning the exposures, and the noise level.</p>
+<div id="cell-fig-seeing" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:16.584098Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:16.583983Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:16.657281Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:16.656801Z&quot;}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>cube <span class="op">=</span> data[<span class="st">'cube'</span>].astype(<span class="bu">float</span>)                      <span class="co"># 45 x 128 x 128</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>P <span class="op">=</span> data[<span class="st">'all_psf'</span>].astype(<span class="bu">float</span>)                      <span class="co"># columns: fmaj, fmin, pa, beta, dx, dy, sigma, f</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fwhm <span class="op">=</span> np.sqrt(P[:, <span class="dv">0</span>] <span class="op">*</span> P[:, <span class="dv">1</span>]) <span class="op">*</span> scale              <span class="co"># arcseconds</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>noise <span class="op">=</span> P[:, <span class="dv">6</span>] <span class="op">/</span> P[:, <span class="dv">7</span>]                              <span class="co"># noise level of each exposure (estimated on whole frames,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>                                                       <span class="co"># nebula included: only the ratios between exposures matter)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="bu">len</span>(cube)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>order <span class="op">=</span> np.argsort(fwhm)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">6.4</span>, <span class="fl">2.9</span>))</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>ax.plot(np.arange(<span class="dv">1</span>, N <span class="op">+</span> <span class="dv">1</span>), fwhm[order], <span class="st">'o'</span>, color<span class="op">=</span>hno.BLUE, ms<span class="op">=</span><span class="dv">4</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'exposures, sorted from sharpest to blurriest'</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">'PSF width (arcsec)'</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'The seeing of the 45 exposures'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'PSF width from </span><span class="sc">{</span>fwhm<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.2f}</span><span class="ss"> to </span><span class="sc">{</span>fwhm<span class="sc">.</span><span class="bu">max</span>()<span class="sc">:.2f}</span><span class="ss"> arcsec, median </span><span class="sc">{</span>np<span class="sc">.</span>median(fwhm)<span class="sc">:.2f}</span><span class="ss">'</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'noise from </span><span class="sc">{</span>noise<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.1e}</span><span class="ss"> to </span><span class="sc">{</span>noise<span class="sc">.</span><span class="bu">max</span>()<span class="sc">:.1e}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>PSF width from 1.46 to 3.56 arcsec, median 2.89
+noise from 4.1e-04 to 4.4e-04</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-seeing" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-seeing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-seeing-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-seeing-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.1: PSF width of the 45 exposures, sorted.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-sharp-blurry" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:16.658652Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:16.658556Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:16.715647Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:16.715198Z&quot;}}" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>sharp, blurry <span class="op">=</span> order[<span class="dv">1</span>], order[<span class="op">-</span><span class="dv">2</span>]</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>hno.show([cube[sharp], cube[blurry], cube.mean(axis<span class="op">=</span><span class="dv">0</span>)],</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>         [<span class="ss">f'a sharp exposure (</span><span class="sc">{</span>fwhm[sharp]<span class="sc">:.1f}</span><span class="ss">")'</span>, <span class="ss">f'a blurry one (</span><span class="sc">{</span>fwhm[blurry]<span class="sc">:.1f}</span><span class="ss">")'</span>, <span class="st">'the mean of all 45'</span>], same_scale<span class="op">=</span><span class="va">True</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-sharp-blurry" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-sharp-blurry-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-sharp-blurry-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-sharp-blurry-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.2: A sharp exposure, a blurry one, and the mean of all 45.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The width of the PSF varies by more than a factor of two. The mean of all exposures (right) has little noise, but it is blurrier than the best exposures: averaging has <strong>diluted the sharp exposures in the blurry ones</strong>.</p>
+<p>Astronomers know two classical answers, and both waste something.</p>
+<ul>
+<li><em>Average everything, then deblur.</em> Simple, but the fine detail that only the sharp exposures recorded has been diluted before the deblurring starts.</li>
+<li><em>Keep only the sharpest exposures</em> (“lucky imaging”). The result is sharper, but most of the photons, collected at great cost, go in the bin.</li>
+</ul>
+</section>
+<section id="the-model-and-its-solution" class="level2" data-number="8.2">
+<h2 data-number="8.2" class="anchored" data-anchor-id="the-model-and-its-solution"><span class="header-section-number">8.2</span> The model and its solution</h2>
+<p>Write the model of notebook 1 once per exposure. All exposures see the same sky <span class="math inline">\(x\)</span>; exposure <span class="math inline">\(i\)</span> has its own PSF <span class="math inline">\(k_i\)</span> and its own noise level <span class="math inline">\(s_i\)</span>:</p>
+<p><span class="math display">\[y_i = k_i * x + n_i, \qquad n_i \sim \mathcal N(0, s_i^2 I), \qquad i = 1, \dots, N .\]</span></p>
+<p>Least squares, each exposure weighted by its noise (a noisy exposure counts less):</p>
+<p><span class="math display">\[\hat x = \arg\min_x \;\sum_{i=1}^{N} \frac{1}{2 s_i^2}\,\|y_i - k_i * x\|^2 .\]</span></p>
+<p>In Fourier space every convolution is a product, the sum of squares separates frequency by frequency, and each frequency is a one-unknown least-squares problem. Setting the derivative to zero gives</p>
+<p><span class="math display">\[S(\nu)\,X(\nu) = R(\nu), \qquad
+R = \sum_i \frac{\bar K_i\, Y_i}{s_i^2}, \qquad S = \sum_i \frac{|K_i|^2}{s_i^2} .\]</span></p>
+<p><span class="math inline">\(S\)</span> goes to zero at high frequencies, as <span class="math inline">\(|K|^2\)</span> did for one image, so we regularise exactly as in notebook 6: a declared target PSF <span class="math inline">\(t\)</span> and a small <span class="math inline">\(\lambda\)</span>,</p>
+<p><span class="math display">\[\hat X_t = T\,\frac{R}{S + \lambda\,S(0)} .\]</span></p>
+<p>This is <strong>proper coaddition</strong>. With <span class="math inline">\(N = 1\)</span> it is the target filter of notebook 6.</p>
+<p>One detail before coding it. The exposures are aligned to a fraction of a pixel, not perfectly. A shift by <span class="math inline">\((d_x, d_y)\)</span> multiplies the Fourier transform by a phase, <span class="math inline">\(e^{-2\pi i(\nu_x d_x + \nu_y d_y)}\)</span> (the <em>shift theorem</em>), so the residual shift of each exposure simply goes into its <span class="math inline">\(K_i\)</span>.</p>
+<div id="21d8ce14" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:16.716999Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:16.716901Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:16.719443Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:16.719088Z&quot;}}" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> frame_otf(shape, p, zoom<span class="op">=</span><span class="fl">1.0</span>):</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Transfer function K_i of one exposure: its Moffat PSF, shifted by its</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">    registration error. p = (fmaj, fmin, pa, beta, dx, dy, ...)."""</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    K <span class="op">=</span> hno.psf2otf(hno.moffat_psf(shape, p[<span class="dv">0</span>] <span class="op">*</span> zoom, p[<span class="dv">1</span>] <span class="op">*</span> zoom, p[<span class="dv">2</span>], p[<span class="dv">3</span>]))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    nu_y, nu_x <span class="op">=</span> fftfreq(shape[<span class="dv">0</span>])[:, <span class="va">None</span>], fftfreq(shape[<span class="dv">1</span>])[<span class="va">None</span>, :]</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> K <span class="op">*</span> np.exp(<span class="op">-</span><span class="ot">2j</span> <span class="op">*</span> np.pi <span class="op">*</span> (nu_x <span class="op">*</span> p[<span class="dv">4</span>] <span class="op">*</span> zoom <span class="op">+</span> nu_y <span class="op">*</span> p[<span class="dv">5</span>] <span class="op">*</span> zoom))</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> proper_coadd(Y, K, s, T, lam):</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Y, K: arrays (N, h, w) of Fourier transforms and transfer functions;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co">    s: noise levels (N,); T: transfer function of the target; lam: regularisation."""</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    w <span class="op">=</span> (<span class="fl">1.0</span> <span class="op">/</span> s<span class="op">**</span><span class="dv">2</span>)[:, <span class="va">None</span>, <span class="va">None</span>]</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    R <span class="op">=</span> np.<span class="bu">sum</span>(w <span class="op">*</span> np.conj(K) <span class="op">*</span> Y, axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    S <span class="op">=</span> np.<span class="bu">sum</span>(w <span class="op">*</span> np.<span class="bu">abs</span>(K)<span class="op">**</span><span class="dv">2</span>, axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ifft2(T <span class="op">*</span> R <span class="op">/</span> (S <span class="op">+</span> lam <span class="op">*</span> S.flat[<span class="dv">0</span>])).real</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> stack_then_deblur(Y, K_mean, T, lam):</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""The classical pipeline: average the exposures, then one target filter."""</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ifft2(T <span class="op">*</span> np.conj(K_mean) <span class="op">*</span> Y.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">/</span> (np.<span class="bu">abs</span>(K_mean)<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> lam)).real</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Two functions of three lines each. Everything else in this notebook is measurement.</p>
+</section>
+<section id="a-controlled-experiment" class="level2" data-number="8.3">
+<h2 data-number="8.3" class="anchored" data-anchor-id="a-controlled-experiment"><span class="header-section-number">8.3</span> A controlled experiment</h2>
+<p>First with a known truth. We take the Hubble image as the sky and simulate 45 exposures of it with <strong>the 45 real PSFs and the real relative noise levels</strong> of our data. (The Hubble image has pixels half the size of ours, so the PSF widths are doubled to keep the same sky scale.)</p>
+<p>The three contenders, all aiming at the same target of 1.8 arcsec:</p>
+<ul>
+<li>the plain mean, not deblurred;</li>
+<li>the mean, then deblurred, using the exact PSF of the mean (a generous assumption: in real life it has to be fitted);</li>
+<li>proper coaddition.</li>
+</ul>
+<div id="cell-fig-simulation" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:16.720891Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:16.720773Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:17.731947Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:17.731481Z&quot;}}" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> data[<span class="st">'hubble'</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">3</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>K_sim <span class="op">=</span> np.array([frame_otf(x.shape, p, zoom<span class="op">=</span><span class="fl">2.0</span>) <span class="cf">for</span> p <span class="kw">in</span> P])</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>s_sim <span class="op">=</span> <span class="fl">0.05</span> <span class="op">*</span> noise <span class="op">/</span> np.median(noise)                 <span class="co"># 5 % noise in a typical exposure</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>Y_sim <span class="op">=</span> np.array([K <span class="op">*</span> fft2(x) <span class="op">+</span> fft2(si <span class="op">*</span> rng.standard_normal(x.shape)) <span class="cf">for</span> K, si <span class="kw">in</span> <span class="bu">zip</span>(K_sim, s_sim)])</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>T_sim <span class="op">=</span> hno.psf2otf(hno.gaussian_psf(x.shape, <span class="dv">2</span> <span class="op">*</span> <span class="fl">2.36</span>)).real          <span class="co"># target: 1.8 arcsec</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>truth <span class="op">=</span> ifft2(T_sim <span class="op">*</span> fft2(x)).real                                     <span class="co"># the sky seen through the target</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>core <span class="op">=</span> (<span class="bu">slice</span>(<span class="dv">24</span>, <span class="op">-</span><span class="dv">24</span>), <span class="bu">slice</span>(<span class="dv">24</span>, <span class="op">-</span><span class="dv">24</span>))</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>error <span class="op">=</span> <span class="kw">lambda</span> img: hno.rel_error(img[core] <span class="op">-</span> truth[core].mean(), truth[core] <span class="op">-</span> truth[core].mean())</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>lams <span class="op">=</span> np.logspace(<span class="op">-</span><span class="dv">6</span>, <span class="dv">0</span>, <span class="dv">25</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>K_mean <span class="op">=</span> K_sim.mean(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>err_classic <span class="op">=</span> [error(stack_then_deblur(Y_sim, K_mean, T_sim, l)) <span class="cf">for</span> l <span class="kw">in</span> lams]</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>err_proper <span class="op">=</span> [error(proper_coadd(Y_sim, K_sim, s_sim, T_sim, l)) <span class="cf">for</span> l <span class="kw">in</span> lams]</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>mean_img <span class="op">=</span> ifft2(Y_sim.mean(axis<span class="op">=</span><span class="dv">0</span>)).real</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">6.4</span>, <span class="fl">3.2</span>))</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>ax.loglog(lams, err_classic, color<span class="op">=</span>hno.ORANGE, label<span class="op">=</span><span class="st">'mean, then deblur'</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>ax.loglog(lams, err_proper, color<span class="op">=</span>hno.BLUE, label<span class="op">=</span><span class="st">'proper coaddition'</span>)</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>ax.axhline(error(mean_img), color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">1.0</span>, ls<span class="op">=</span>(<span class="dv">0</span>, (<span class="dv">4</span>, <span class="dv">2</span>)))</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>ax.text(lams[<span class="dv">0</span>], error(mean_img) <span class="op">*</span> <span class="fl">1.07</span>, <span class="st">'plain mean'</span>, fontsize<span class="op">=</span><span class="dv">8</span>, color<span class="op">=</span>hno.INK2)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'$</span><span class="ch">\\</span><span class="st">lambda$'</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">'relative error against the sky at 1.8"'</span>)<span class="op">;</span> ax.legend(loc<span class="op">=</span><span class="st">'upper left'</span>)</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Simulation with the 45 real PSFs'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'plain mean          </span><span class="sc">{</span>error(mean_img)<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'mean, then deblur   </span><span class="sc">{</span><span class="bu">min</span>(err_classic)<span class="sc">:.4f}</span><span class="ss">   (best lambda </span><span class="sc">{</span>lams[np.argmin(err_classic)]<span class="sc">:.0e}</span><span class="ss">)'</span>)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'proper coaddition   </span><span class="sc">{</span><span class="bu">min</span>(err_proper)<span class="sc">:.4f}</span><span class="ss">   (best lambda </span><span class="sc">{</span>lams[np.argmin(err_proper)]<span class="sc">:.0e}</span><span class="ss">)'</span>)</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'proper coaddition lowers the error by </span><span class="sc">{</span><span class="dv">1</span> <span class="op">-</span> <span class="bu">min</span>(err_proper) <span class="op">/</span> <span class="bu">min</span>(err_classic)<span class="sc">:.0%}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>plain mean          0.0600
+mean, then deblur   0.0248   (best lambda 3e-03)
+proper coaddition   0.0228   (best lambda 3e-03)
+proper coaddition lowers the error by 8%</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-simulation" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-simulation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-simulation-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-simulation-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.3: Simulation: relative error of the two pipelines against the regularisation parameter.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Both deblurring pipelines beat the plain mean by a wide margin. Proper coaddition is <strong>never above</strong> the classical pipeline, clearly below it for small <span class="math inline">\(\lambda\)</span>, and at the best setting of each it has the lower error. The gain is modest here, and it was obtained against an opponent that was given the exact PSF of the mean. What matters is where it comes from.</p>
+</section>
+<section id="where-the-gain-comes-from" class="level2" data-number="8.4">
+<h2 data-number="8.4" class="anchored" data-anchor-id="where-the-gain-comes-from"><span class="header-section-number">8.4</span> Where the gain comes from</h2>
+<p>Look at one spatial frequency <span class="math inline">\(\nu\)</span>. In the sum <span class="math inline">\(R\)</span>, exposure <span class="math inline">\(i\)</span> enters with the weight <span class="math inline">\(\bar K_i / s_i^2\)</span>: <strong>it counts in proportion to how well it transmits that frequency</strong>. A blurry exposure has <span class="math inline">\(K_i(\nu) \approx 0\)</span> at a high frequency and simply does not vote there; at low frequencies, where it is as good as any other, it votes fully.</p>
+<p>Here is the share of each exposure in <span class="math inline">\(S\)</span>, at a low and at a high frequency:</p>
+<div id="cell-fig-shares" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:17.733618Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:17.733471Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:17.852316Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:17.851799Z&quot;}}" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>shape <span class="op">=</span> cube.shape[<span class="dv">1</span>:]</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>K_all <span class="op">=</span> np.array([frame_otf(shape, p) <span class="cf">for</span> p <span class="kw">in</span> P])</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>weights <span class="op">=</span> np.<span class="bu">abs</span>(K_all)<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> noise[:, <span class="va">None</span>, <span class="va">None</span>]<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">7.5</span>, <span class="fl">3.0</span>))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (iy, ix), name, col <span class="kw">in</span> (((<span class="dv">0</span>, <span class="dv">4</span>), <span class="st">'0.04 cycles/arcsec (large structures)'</span>, hno.AQUA), ((<span class="dv">0</span>, <span class="dv">32</span>), <span class="st">'0.33 cycles/arcsec (fine detail)'</span>, hno.ORANGE)):</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    share <span class="op">=</span> weights[:, iy, ix] <span class="op">/</span> weights[:, iy, ix].<span class="bu">sum</span>()</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    ax.plot(np.arange(<span class="dv">1</span>, N <span class="op">+</span> <span class="dv">1</span>), <span class="dv">100</span> <span class="op">*</span> share[order], <span class="st">'o-'</span>, color<span class="op">=</span>col, ms<span class="op">=</span><span class="fl">3.5</span>, label<span class="op">=</span>name)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="dv">100</span> <span class="op">/</span> N, color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">0.8</span>)<span class="op">;</span> ax.text(N, <span class="dv">100</span> <span class="op">/</span> N <span class="op">*</span> <span class="fl">1.15</span>, <span class="st">'equal shares'</span>, ha<span class="op">=</span><span class="st">'right'</span>, fontsize<span class="op">=</span><span class="dv">8</span>, color<span class="op">=</span>hno.INK2)</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'exposures, sorted from sharpest to blurriest'</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">'share of the information (%)'</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Who is trusted, at two spatial frequencies'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax.legend()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-shares" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shares-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-shares-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shares-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.4: Share of each exposure in the information, at a low and at a high spatial frequency.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><a href="#fig-shares" class="quarto-xref">Figure&nbsp;<span>8.4</span></a> tells the story. For the large structures every exposure contributes about equally: nothing is wasted. For the fine detail, a handful of sharp exposures carry almost everything and the blurry ones are ignored. Proper coaddition is lucky imaging decided <strong>frequency by frequency</strong>, without throwing a single photon away.</p>
+<p>The size of the gain can be written down. At each frequency, the ratio of the squared signal-to-noise ratios of proper coaddition and of the plain mean is</p>
+<p><span class="math display">\[G(\nu) = \frac{S(\nu)\,\sum_i s_i^2}{\bigl|\sum_i K_i(\nu)\bigr|^2} \;\ge\; 1 ,\]</span></p>
+<p>by the Cauchy-Schwarz inequality, with equality only if all exposures have the same PSF and the same noise. Deblurring the mean afterwards cannot change its signal-to-noise ratio at any frequency (it multiplies signal and noise by the same number), so <span class="math inline">\(G\)</span> is also the advantage over the classical pipeline. And <span class="math inline">\(G\)</span> needs only the PSFs and the noise levels: <strong>it can be computed before any coaddition is done.</strong></p>
+<div id="cell-fig-gain" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:17.853982Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:17.853880Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:17.921095Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:17.920444Z&quot;}}" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>S_real <span class="op">=</span> weights.<span class="bu">sum</span>(axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>G <span class="op">=</span> S_real <span class="op">*</span> np.<span class="bu">sum</span>(noise<span class="op">**</span><span class="dv">2</span>) <span class="op">/</span> np.<span class="bu">abs</span>(K_all.<span class="bu">sum</span>(axis<span class="op">=</span><span class="dv">0</span>))<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>nu, G_r <span class="op">=</span> hno.radial_profile(G)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">6.4</span>, <span class="fl">3.0</span>))</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>ax.semilogy(nu <span class="op">/</span> scale, G_r, color<span class="op">=</span>hno.BLUE)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>ax.axhline(<span class="dv">1</span>, color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>ax.set_yticks([<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>, <span class="dv">5</span>, <span class="dv">7</span>])<span class="op">;</span> ax.set_yticklabels([<span class="st">'1'</span>, <span class="st">'2'</span>, <span class="st">'3'</span>, <span class="st">'5'</span>, <span class="st">'7'</span>])<span class="op">;</span> ax.minorticks_off()</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'spatial frequency (cycles / arcsecond)'</span>)<span class="op">;</span> ax.set_title(<span class="st">'Predicted gain $G$ for these 45 exposures'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'G at 0.3 cycles/arcsec: </span><span class="sc">{</span>G_r[np.argmin(np.<span class="bu">abs</span>(nu <span class="op">/</span> scale <span class="op">-</span> <span class="fl">0.3</span>))]<span class="sc">:.2f}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>G at 0.3 cycles/arcsec: 1.84</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-gain" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-gain-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-gain-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-gain-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.5: Predicted gain of proper coaddition over the plain mean, for the 45 real exposures.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><a href="#fig-gain" class="quarto-xref">Figure&nbsp;<span>8.5</span></a> predicts no gain for the large structures, a factor of almost two at 0.3 cycles per arcsecond, more beyond. For the two other colour channels of this nebula, whose exposures were taken in steadier conditions, the same computation gives 1.15: hardly any gain to expect. Whether this prediction matches the gain actually measured, across many fields and instruments, is the question of our research project.</p>
+</section>
+<section id="the-real-exposures" class="level2" data-number="8.5">
+<h2 data-number="8.5" class="anchored" data-anchor-id="the-real-exposures"><span class="header-section-number">8.5</span> The real exposures</h2>
+<p>Now the real cube. There is no true image, so we judge as in notebook 6: the <strong>width of a star</strong> in the result, and the <strong>noise</strong>, measured by processing the even and the odd exposures separately and taking half the difference (notebook 2).</p>
+<p>For the classical pipeline we do what one does in practice: measure the PSF of the mean on a star, and deblur the mean with it.</p>
+<div id="505c9611" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:17.922670Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:17.922570Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:18.417172Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:18.416679Z&quot;}}" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>Y_all <span class="op">=</span> np.array([fft2(hno.taper(f, <span class="dv">12</span>)) <span class="cf">for</span> f <span class="kw">in</span> cube])</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> hno.psf2otf(hno.gaussian_psf(shape, <span class="fl">2.36</span>)).real                    <span class="co"># target: 2.36 px = 1.8 arcsec</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>star <span class="op">=</span> (<span class="dv">97</span>, <span class="dv">105</span>)                                                       <span class="co"># an unsaturated star</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>fit_mean <span class="op">=</span> hno.fit_star(cube.mean(axis<span class="op">=</span><span class="dv">0</span>), <span class="op">*</span>star)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>K_of_mean <span class="op">=</span> hno.psf2otf(hno.moffat_psf(shape, fit_mean[<span class="st">'fwhm'</span>], beta<span class="op">=</span>fit_mean[<span class="st">'beta'</span>]))</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>even, odd <span class="op">=</span> np.arange(<span class="dv">0</span>, N, <span class="dv">2</span>), np.arange(<span class="dv">1</span>, N, <span class="dv">2</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>quiet <span class="op">=</span> (<span class="bu">slice</span>(<span class="dv">4</span>, <span class="dv">44</span>), <span class="bu">slice</span>(<span class="dv">4</span>, <span class="dv">44</span>))                                   <span class="co"># a corner without bright stars</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>robust_sigma <span class="op">=</span> <span class="kw">lambda</span> a: <span class="fl">1.4826</span> <span class="op">*</span> np.median(np.<span class="bu">abs</span>(a <span class="op">-</span> np.median(a)))</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> measure(pipeline, lam):</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Star width (arcsec) of the full result, and its noise from the even/odd split."""</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    full <span class="op">=</span> pipeline(np.arange(N), lam)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>    half_diff <span class="op">=</span> (pipeline(even, lam) <span class="op">-</span> pipeline(odd, lam)) <span class="op">/</span> <span class="dv">2</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> hno.fit_star(full, <span class="op">*</span>star)[<span class="st">'fwhm'</span>] <span class="op">*</span> scale, robust_sigma(half_diff[quiet]), full</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>run_proper <span class="op">=</span> <span class="kw">lambda</span> idx, lam: proper_coadd(Y_all[idx], K_all[idx], noise[idx], T, lam)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>run_classic <span class="op">=</span> <span class="kw">lambda</span> idx, lam: stack_then_deblur(Y_all[idx], K_of_mean, T, lam)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'plain mean: star width </span><span class="sc">{</span>fit_mean[<span class="st">"fwhm"</span>] <span class="op">*</span> scale<span class="sc">:.2f}</span><span class="ss"> arcsec'</span>)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'</span><span class="sc">{</span><span class="st">"lambda"</span><span class="sc">:&gt;8s}</span><span class="ss"> | proper: width  noise   | classic: width  noise'</span>)</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>results <span class="op">=</span> {}</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> lam <span class="kw">in</span> (<span class="fl">1e-1</span>, <span class="fl">3e-2</span>, <span class="fl">1e-2</span>, <span class="fl">3e-3</span>, <span class="fl">1e-3</span>, <span class="fl">3e-4</span>):</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>    wp, n_p, img_p <span class="op">=</span> measure(run_proper, lam)<span class="op">;</span> wc, n_c, img_c <span class="op">=</span> measure(run_classic, lam)</span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>    results[lam] <span class="op">=</span> (wp, n_p, img_p, wc, n_c, img_c)</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'</span><span class="sc">{</span>lam<span class="sc">:8.0e}</span><span class="ss"> |        </span><span class="sc">{</span>wp<span class="sc">:5.2f}</span><span class="ss">  </span><span class="sc">{</span>n_p<span class="sc">:.2e}</span><span class="ss"> |         </span><span class="sc">{</span>wc<span class="sc">:5.2f}</span><span class="ss">  </span><span class="sc">{</span>n_c<span class="sc">:.2e}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>plain mean: star width 2.46 arcsec
+  lambda | proper: width  noise   | classic: width  noise
+   1e-01 |         2.95  1.01e-05 |          3.16  9.68e-06
+   3e-02 |         2.50  1.65e-05 |          2.70  1.68e-05
+   1e-02 |         2.22  2.39e-05 |          2.40  2.49e-05
+   3e-03 |         2.02  3.18e-05 |          2.17  3.64e-05
+   1e-03 |         1.90  3.88e-05 |          2.03  4.96e-05
+   3e-04 |         1.84  4.45e-05 |          1.92  6.51e-05</code></pre>
+</div>
+</div>
+<p>Read the table along each row first: at every <span class="math inline">\(\lambda\)</span> proper coaddition is <strong>sharper</strong>, and from <span class="math inline">\(\lambda = 3\times10^{-2}\)</span> downwards, which is where either method starts to sharpen the image at all, it is also <strong>less noisy</strong>.</p>
+<p>Then compare at equal sharpness, which is the fair comparison. Proper coaddition at <span class="math inline">\(\lambda = 3\times10^{-3}\)</span> and the classical pipeline at <span class="math inline">\(\lambda = 10^{-3}\)</span> deliver the same star width:</p>
+<div id="cell-fig-real-coadd" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:18.419051Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:18.418888Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:18.500448Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:18.499968Z&quot;}}" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>wp, n_p, img_p <span class="op">=</span> results[<span class="fl">3e-3</span>][:<span class="dv">3</span>]</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>wc, n_c, img_c <span class="op">=</span> results[<span class="fl">1e-3</span>][<span class="dv">3</span>:]</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'proper coaddition : star width </span><span class="sc">{</span>wp<span class="sc">:.2f}</span><span class="ss"> arcsec, noise </span><span class="sc">{</span>n_p<span class="sc">:.2e}</span><span class="ss">'</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'mean, then deblur : star width </span><span class="sc">{</span>wc<span class="sc">:.2f}</span><span class="ss"> arcsec, noise </span><span class="sc">{</span>n_c<span class="sc">:.2e}</span><span class="ss">'</span>)</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'same sharpness, </span><span class="sc">{</span><span class="dv">1</span> <span class="op">-</span> n_p <span class="op">/</span> n_c<span class="sc">:.0%}</span><span class="ss"> less noise'</span>)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>inside <span class="op">=</span> (<span class="bu">slice</span>(<span class="dv">14</span>, <span class="op">-</span><span class="dv">14</span>), <span class="bu">slice</span>(<span class="dv">14</span>, <span class="op">-</span><span class="dv">14</span>))                              <span class="co"># leave out the tapered frame</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>lo, hi <span class="op">=</span> np.percentile(img_p[inside], [<span class="dv">1</span>, <span class="fl">99.0</span>])</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">4</span>, figsize<span class="op">=</span>(<span class="fl">11.6</span>, <span class="fl">3.2</span>))</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>panels <span class="op">=</span> ((cube.mean(axis<span class="op">=</span><span class="dv">0</span>)[inside], <span class="st">'mean of 45 exposures'</span>), (img_c[inside], <span class="st">'mean, then deblur'</span>),</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>          (img_p[inside], <span class="st">'proper coaddition'</span>), (data[<span class="st">'hubble'</span>].astype(<span class="bu">float</span>)[<span class="dv">28</span>:<span class="op">-</span><span class="dv">28</span>, <span class="dv">28</span>:<span class="op">-</span><span class="dv">28</span>], <span class="st">'Hubble, same field'</span>))</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> a, (img, name) <span class="kw">in</span> <span class="bu">zip</span>(ax, panels):</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    l, h <span class="op">=</span> (lo, hi) <span class="cf">if</span> <span class="st">'Hubble'</span> <span class="kw">not</span> <span class="kw">in</span> name <span class="cf">else</span> np.percentile(img, [<span class="dv">1</span>, <span class="fl">99.7</span>])</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    a.imshow(np.clip((img <span class="op">-</span> l) <span class="op">/</span> (h <span class="op">-</span> l), <span class="dv">0</span>, <span class="dv">1</span>) <span class="op">**</span> <span class="fl">0.5</span>, vmin<span class="op">=</span><span class="dv">0</span>, vmax<span class="op">=</span><span class="dv">1</span>)<span class="op">;</span> a.set_title(name)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    a.set_xticks([])<span class="op">;</span> a.set_yticks([])<span class="op">;</span> a.grid(<span class="va">False</span>)</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>proper coaddition : star width 2.02 arcsec, noise 3.18e-05
+mean, then deblur : star width 2.03 arcsec, noise 4.96e-05
+same sharpness, 36% less noise</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-real-coadd" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-real-coadd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-real-coadd-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-real-coadd-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.6: The real exposures: plain mean, mean then deblurred, proper coaddition at the same delivered star width, and Hubble.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>A third less noise at the same delivered resolution, from the same 45 exposures, with a method that fits in three lines and uses no prior knowledge about nebulae: only the measured PSFs. The Hubble image of the same field, on the right, shows what there is to be found.</p>
+<p>Look also at the bright star: in both deblurred images it has a dark ring. It is saturated, it violates the model, and no amount of clever weighting changes that. The project measures the PSFs on the stars, then removes the stars from the exposures before coadding the nebula.</p>
+</section>
+<section id="the-weak-point-every-exposure-is-trusted" class="level2" data-number="8.6">
+<h2 data-number="8.6" class="anchored" data-anchor-id="the-weak-point-every-exposure-is-trusted"><span class="header-section-number">8.6</span> The weak point: every exposure is trusted</h2>
+<p>Least squares has no notion of a <em>wrong</em> measurement. Go back to the simulation and spoil <strong>one</strong> exposure out of 45 with a satellite trail, a bright line that the model knows nothing about.</p>
+<div id="cell-fig-trail" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:18.502033Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:18.501931Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:18.633856Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:18.633504Z&quot;}}" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>bad <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>yy, xx <span class="op">=</span> np.indices(x.shape)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>trail <span class="op">=</span> <span class="fl">3.0</span> <span class="op">*</span> np.exp(<span class="op">-</span><span class="fl">0.5</span> <span class="op">*</span> ((yy <span class="op">-</span> <span class="fl">0.45</span> <span class="op">*</span> xx <span class="op">-</span> <span class="dv">60</span>) <span class="op">/</span> <span class="fl">1.5</span>)<span class="op">**</span><span class="dv">2</span>)          <span class="co"># a bright oblique line</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>Y_bad <span class="op">=</span> Y_sim.copy()</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>Y_bad[bad] <span class="op">=</span> Y_sim[bad] <span class="op">+</span> fft2(trail)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>lam <span class="op">=</span> lams[np.argmin(err_proper)]</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>clean <span class="op">=</span> proper_coadd(Y_sim, K_sim, s_sim, T_sim, lam)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>spoiled <span class="op">=</span> proper_coadd(Y_bad, K_sim, s_sim, T_sim, lam)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'error without the trail: </span><span class="sc">{</span>error(clean)<span class="sc">:.4f}</span><span class="ss">     with one spoiled exposure: </span><span class="sc">{</span>error(spoiled)<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>hno.show([ifft2(Y_bad[bad]).real, clean, spoiled], [<span class="st">'the spoiled exposure'</span>, <span class="st">'coadd of 45 clean exposures'</span>, <span class="st">'coadd with the spoiled one'</span>], width<span class="op">=</span><span class="fl">3.3</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>error without the trail: 0.0228     with one spoiled exposure: 0.0425</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-trail" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-trail-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="08_from_one_frame_to_many_files/figure-html/fig-trail-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-trail-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8.7: One spoiled exposure, the coadd of the clean exposures, and the coadd that includes the spoiled one.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>One exposure in forty-five, and the trail is in the final image, and the error has almost doubled. The classical average at least has a standard defence, <em>outlier rejection</em>: discard, pixel by pixel, the values that disagree with the other exposures. Proper coaddition as written has none.</p>
+<p>This is not a thought experiment. In our real data one exposure was taken during a gust of wind and shows every star twice. Its PSF fit looked perfectly normal, it was coadded with the others, and a ghost star appeared in the result.</p>
+<p>Making the estimator <strong>robust</strong>, so that an exposure or a pixel that contradicts the others is detected and set aside, without giving up what proper coaddition gains, is the first task of the project. It requires replacing the square in the least-squares criterion by something more tolerant, and then there is no closed form any more. Notebook 9 provides the tools.</p>
+</section>
+<section id="your-turn" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="your-turn">Your turn</h2>
+<ol type="1">
+<li><strong>Derive it.</strong> Starting from the weighted least-squares criterion of section 8.2, write the criterion in Fourier space (Parseval), differentiate with respect to <span class="math inline">\(X(\nu)\)</span> and obtain <span class="math inline">\(S X = R\)</span>.</li>
+<li><strong>One exposure.</strong> Check numerically that <code>proper_coadd</code> with a single exposure equals the target filter of notebook 6.</li>
+<li><strong>Identical exposures.</strong> Replace all 45 PSFs by the same one in the simulation of section 8.3. What happens to the two error curves, and to <span class="math inline">\(G\)</span>? Explain with the Cauchy-Schwarz inequality.</li>
+<li><strong>Lucky imaging.</strong> Coadd only the 10 sharpest exposures of the real cube, properly. Compare star width and noise with the full coadd at the same <span class="math inline">\(\lambda\)</span>. Who wins on each axis, and why does the full coadd never lose on sharpness at equal noise?</li>
+<li><strong>The shift theorem.</strong> Set the registration errors (columns 4 and 5 of <code>P</code>) to zero in <code>frame_otf</code> and redo section 8.5. How much star width does ignoring them cost?</li>
+<li><strong>A wrong PSF.</strong> Multiply the PSF widths of all exposures by 1.2 before coadding the real cube (you “measured” them badly). What happens to the delivered star width? What does the dark ring around ordinary stars tell you? This is why the project <em>audits</em> its results.</li>
+<li><strong>Before the project.</strong> Read sections 1 to 3 of Zackay &amp; Ofek (2017) and find our <span class="math inline">\(R\)</span> and <span class="math inline">\(S\)</span> in their equations. What do they call the image <span class="math inline">\(R / \sqrt{S}\)</span>, and what is special about its noise?</li>
+</ol>
+</section>
+<section id="where-to-read-more" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="where-to-read-more">Where to read more</h2>
+<ul>
+<li><span class="citation" data-cites="zackay2017">Zackay and Ofek (<a href="../references.html#ref-zackay2017" role="doc-biblioref">2017</a>)</span>, the paper that introduced proper coaddition.</li>
+<li><span class="citation" data-cites="magain1998">Magain et al. (<a href="../references.html#ref-magain1998" role="doc-biblioref">1998</a>)</span>, for the declared target.</li>
+<li>The project’s own notes: <code>docs/formulation/</code> and <code>docs/PSF-STUDY.md</code> in this repository.</li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-magain1998" class="csl-entry" role="listitem">
+Magain, P., F. Courbin, and S. Sohy. 1998. <span>“Deconvolution with Correct Sampling.”</span> <em>The Astrophysical Journal</em> 494: 472–77. <a href="https://doi.org/10.1086/305187">https://doi.org/10.1086/305187</a>.
+</div>
+<div id="ref-zackay2017" class="csl-entry" role="listitem">
+Zackay, Barak, and Eran O. Ofek. 2017. <span>“How to <span>COADD</span> Images. <span>II</span>. A Coaddition Image That Is Optimal for Any Purpose in the Background-Dominated Noise Limit.”</span> <em>The Astrophysical Journal</em> 836 (2): 188. <a href="https://doi.org/10.3847/1538-4357/836/2/188">https://doi.org/10.3847/1538-4357/836/2/188</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/hugues-talbot\.github\.io\/files\/teaching\/deblurring\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/07_colour_and_smoothing_norms.html" class="pagination-link" aria-label="Colour images and smoothing norms">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Colour images and smoothing norms</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../chapters/09_iterative_methods.html" class="pagination-link" aria-label="Iterative methods: when there is no closed form">
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Iterative methods: when there is no closed form</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>6&nbsp; Regularisation by spectral filtering – Deblurring images, in Python</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../chapters/07_colour_and_smoothing_norms.html" rel="next">
+<link href="../chapters/05_svd_and_spectral_analysis.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-bf8541b1296accc9344c8d492b94c564.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar docked quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/01_the_deblurring_problem.html">The book, chapter by chapter</a></li><li class="breadcrumb-item"><a href="../chapters/06_regularisation_by_filtering.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation docked overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">Deblurring images, in Python</a> 
+        <div class="sidebar-tools-main">
+    <a href="../deblurring-images-in-python.pdf" title="Download PDF" class="quarto-navigation-tool px-1" aria-label="Download PDF"><i class="bi bi-file-pdf"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">The book, chapter by chapter</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/01_the_deblurring_problem.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">The image deblurring problem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/02_images_as_arrays.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Images as arrays</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/03_the_blurring_function.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">The blurring function</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/04_structured_computations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Structured computations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/05_svd_and_spectral_analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/06_regularisation_by_filtering.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/07_colour_and_smoothing_norms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Colour images and smoothing norms</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Towards the research project</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/08_from_one_frame_to_many.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">From one frame to many: proper coaddition</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/09_iterative_methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Iterative methods: when there is no closed form</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../hnotools_listing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">The helper module <code>hnotools.py</code></span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul class="collapse">
+  <li><a href="#two-filters" id="toc-two-filters" class="nav-link active" data-scroll-target="#two-filters"><span class="header-section-number">6.1</span> Two filters</a></li>
+  <li><a href="#tikhonov-regularisation-is-a-least-squares-problem" id="toc-tikhonov-regularisation-is-a-least-squares-problem" class="nav-link" data-scroll-target="#tikhonov-regularisation-is-a-least-squares-problem"><span class="header-section-number">6.2</span> Tikhonov regularisation is a least-squares problem</a></li>
+  <li><a href="#deblurring-an-image-with-both-filters" id="toc-deblurring-an-image-with-both-filters" class="nav-link" data-scroll-target="#deblurring-an-image-with-both-filters"><span class="header-section-number">6.3</span> Deblurring an image with both filters</a></li>
+  <li><a href="#two-errors-that-pull-in-opposite-directions" id="toc-two-errors-that-pull-in-opposite-directions" class="nav-link" data-scroll-target="#two-errors-that-pull-in-opposite-directions"><span class="header-section-number">6.4</span> Two errors that pull in opposite directions</a></li>
+  <li><a href="#choosing-alpha-without-knowing-the-truth" id="toc-choosing-alpha-without-knowing-the-truth" class="nav-link" data-scroll-target="#choosing-alpha-without-knowing-the-truth"><span class="header-section-number">6.5</span> Choosing <span class="math inline">\(\alpha\)</span> without knowing the truth</a></li>
+  <li><a href="#real-data-and-a-fourth-rule" id="toc-real-data-and-a-fourth-rule" class="nav-link" data-scroll-target="#real-data-and-a-fourth-rule"><span class="header-section-number">6.6</span> Real data, and a fourth rule</a></li>
+  <li><a href="#your-turn" id="toc-your-turn" class="nav-link" data-scroll-target="#your-turn">Your turn</a></li>
+  <li><a href="#where-to-read-more" id="toc-where-to-read-more" class="nav-link" data-scroll-target="#where-to-read-more">Where to read more</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../chapters/01_the_deblurring_problem.html">The book, chapter by chapter</a></li><li class="breadcrumb-item"><a href="../chapters/06_regularisation_by_filtering.html"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Regularisation by spectral filtering</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><em>Companion notebook to Hansen, Nagy &amp; O’Leary, <strong>Deblurring Images</strong>, chapter 6, with the optimisation point of view of H. Talbot’s <strong>Lecture Notes on Optimisation</strong>, chapter 3.</em></p>
+<p>Notebook 5 ended on a formula: a regularised solution is a filtered sum, <span class="math inline">\(x_{\text{filt}} = \sum_i \phi_i\, (u_i^{\mathsf T} b / \sigma_i)\, v_i\)</span>. This notebook is about choosing the filter factors <span class="math inline">\(\phi_i\)</span>, and above all about choosing <strong>how much</strong> to filter when the true image is unknown.</p>
+<p><strong>What you will take away</strong></p>
+<ol type="1">
+<li>Two classical filters: the truncated SVD and <strong>Tikhonov</strong> regularisation.</li>
+<li>Tikhonov regularisation is also the solution of a penalised least-squares problem. Filtering and penalising are two views of the same thing.</li>
+<li>The error of a regularised solution has two parts that pull in opposite directions.</li>
+<li>Three rules for choosing the regularisation parameter without the truth: the discrepancy principle, generalised cross-validation, and the L-curve.</li>
+<li>A fourth rule, the one our project uses: declare the resolution you will deliver, then verify it.</li>
+</ol>
+<div id="afcbf538" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:06.307658Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:06.307405Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:06.950373Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:06.949631Z&quot;}}" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> numpy.fft <span class="im">import</span> fft2, ifft2</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> optimize</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> hnotools <span class="im">as</span> hno</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>hno.style()</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>rng <span class="op">=</span> np.random.default_rng(<span class="dv">0</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> hno.load_sample()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="two-filters" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="two-filters"><span class="header-section-number">6.1</span> Two filters</h2>
+<ul>
+<li><strong>Truncated SVD</strong>: keep the <span class="math inline">\(k\)</span> largest singular values, drop the others. <span class="math inline">\(\phi_i = 1\)</span> if <span class="math inline">\(\sigma_i &gt; \tau\)</span>, else <span class="math inline">\(0\)</span>.</li>
+<li><strong>Tikhonov</strong>: damp smoothly, <span class="math inline">\(\;\phi_i = \dfrac{\sigma_i^2}{\sigma_i^2 + \alpha^2}\)</span>.</li>
+</ul>
+<p>Both leave the large singular values alone (<span class="math inline">\(\phi \approx 1\)</span>) and suppress the small ones (<span class="math inline">\(\phi \approx 0\)</span>). The parameter, <span class="math inline">\(\tau\)</span> or <span class="math inline">\(\alpha\)</span>, is the singular value at which the filter switches.</p>
+<div id="cell-fig-filters" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:06.952169Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:06.951917Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:07.246565Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:07.245905Z&quot;}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>sig <span class="op">=</span> np.logspace(<span class="op">-</span><span class="dv">6</span>, <span class="dv">0</span>, <span class="dv">400</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> <span class="fl">1e-3</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">6.4</span>, <span class="fl">3.0</span>))</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>ax.semilogx(sig, (sig <span class="op">&gt;</span> alpha).astype(<span class="bu">float</span>), color<span class="op">=</span>hno.ORANGE, label<span class="op">=</span><span class="st">'truncated SVD, $</span><span class="ch">\\</span><span class="st">tau = 10^{-3}$'</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>ax.semilogx(sig, sig<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> (sig<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> alpha<span class="op">**</span><span class="dv">2</span>), color<span class="op">=</span>hno.BLUE, label<span class="op">=</span><span class="st">'Tikhonov, $</span><span class="ch">\\</span><span class="st">alpha = 10^{-3}$'</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>ax.set_xlabel(<span class="st">'singular value $</span><span class="ch">\\</span><span class="st">sigma_i$'</span>)<span class="op">;</span> ax.set_title(<span class="st">'filter factors $</span><span class="ch">\\</span><span class="st">phi_i$'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax.legend()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-filters" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-filters-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="06_regularisation_by_filtering_files/figure-html/fig-filters-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-filters-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6.1: Filter factors of the truncated SVD and of Tikhonov regularisation.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Note the Tikhonov factor for a small singular value: <span class="math inline">\(\phi_i / \sigma_i
+\approx \sigma_i / \alpha^2\)</span>, which goes to zero instead of infinity. The division by a tiny number has been replaced by a multiplication by a tiny number.</p>
+</section>
+<section id="tikhonov-regularisation-is-a-least-squares-problem" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="tikhonov-regularisation-is-a-least-squares-problem"><span class="header-section-number">6.2</span> Tikhonov regularisation is a least-squares problem</h2>
+<p>The lecture notes introduce Tikhonov regularisation from a different door. Instead of solving <span class="math inline">\(A x = b\)</span>, look for the <span class="math inline">\(x\)</span> that explains the data <strong>and</strong> stays small:</p>
+<p><span class="math display">\[x_\alpha = \arg\min_x \;\|A x - b\|_2^2 \;+\; \alpha^2 \|x\|_2^2 .\]</span></p>
+<p>The first term asks for fidelity to the data, the second penalises the wild oscillations that the naive solution is made of, and <span class="math inline">\(\alpha\)</span> sets the exchange rate between the two. Setting the gradient to zero gives a linear system, the <em>regularised normal equations</em>,</p>
+<p><span class="math display">\[(A^{\mathsf T} A + \alpha^2 I)\, x = A^{\mathsf T} b ,\]</span></p>
+<p>whose matrix is symmetric positive definite, hence always invertible.</p>
+<p>Is this the same solution as the Tikhonov <em>filter</em>? Check on the 1-D problem of notebook 5, where we have both the matrix and its SVD.</p>
+<div id="3de33576" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:07.248698Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:07.248549Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:07.288844Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:07.288302Z&quot;}}" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">250</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>s, signal <span class="op">=</span> hno.lecture_signal(N)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>A <span class="op">=</span> hno.blur_matrix_1d(hno.gaussian_kernel_1d(<span class="fl">4.0</span>, <span class="dv">40</span>), N)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> A <span class="op">@</span> signal <span class="op">+</span> <span class="fl">2e-4</span> <span class="op">*</span> rng.standard_normal(N)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>U, sv, Vt <span class="op">=</span> np.linalg.svd(A)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>alpha <span class="op">=</span> <span class="fl">3e-3</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>x_filter <span class="op">=</span> Vt.T <span class="op">@</span> (sv <span class="op">/</span> (sv<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> alpha<span class="op">**</span><span class="dv">2</span>) <span class="op">*</span> (U.T <span class="op">@</span> b))                         <span class="co"># filtered SVD sum</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>x_normal <span class="op">=</span> np.linalg.solve(A.T <span class="op">@</span> A <span class="op">+</span> alpha<span class="op">**</span><span class="dv">2</span> <span class="op">*</span> np.eye(N), A.T <span class="op">@</span> b)             <span class="co"># normal equations</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">'largest difference between the two solutions:'</span>, np.<span class="bu">abs</span>(x_filter <span class="op">-</span> x_normal).<span class="bu">max</span>())</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'relative error of the Tikhonov solution: </span><span class="sc">{</span>hno<span class="sc">.</span>rel_error(x_filter, signal)<span class="sc">:.3f}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>largest difference between the two solutions: 2.196867132653324e-10
+relative error of the Tikhonov solution: 0.044</code></pre>
+</div>
+</div>
+<p>Identical. Insert <span class="math inline">\(A = U \Sigma V^{\mathsf T}\)</span> in the normal equations and the filter factors <span class="math inline">\(\sigma_i^2 / (\sigma_i^2 + \alpha^2)\)</span> fall out in two lines (exercise 1).</p>
+<p>The two views are worth keeping side by side.</p>
+<ul>
+<li>The <strong>filter</strong> view is the one that <em>computes fast</em>, whenever a fast transform diagonalises <span class="math inline">\(A\)</span>.</li>
+<li>The <strong>optimisation</strong> view is the one that <em>generalises</em>: change the penalty, add constraints, replace the square by a robust loss, and the minimisation problem still makes sense when no SVD can help. Notebooks 7 and 9 go down that road, and so does our project.</li>
+</ul>
+</section>
+<section id="deblurring-an-image-with-both-filters" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="deblurring-an-image-with-both-filters"><span class="header-section-number">6.3</span> Deblurring an image with both filters</h2>
+<p>For images we use a fast transform. The Gaussian PSF is symmetric, so we take reflexive boundaries and the cosine transform (notebook 4); the eigenvalues <span class="math inline">\(S\)</span> of the blur play the role of the singular values.</p>
+<p>In this section and the next two, the test data are created <strong>with the same reflexive boundaries that the solver assumes</strong>. Notebook 4 called this the “inverse crime”, and it is one. We commit it on purpose: the rules of section 6.5 are derived for data that obey the model exactly, plus white noise, and we first want to see them work under their own assumptions. Section 6.5 ends with what happens when the assumptions fail.</p>
+<div id="cell-fig-two-filters" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:07.290488Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:07.290379Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:07.577536Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:07.576824Z&quot;}}" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy <span class="im">import</span> ndimage</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>psf <span class="op">=</span> hno.gaussian_psf((<span class="dv">25</span>, <span class="dv">25</span>), fwhm<span class="op">=</span><span class="fl">6.0</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>noise_level <span class="op">=</span> <span class="fl">0.002</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>x_true <span class="op">=</span> data[<span class="st">'hubble'</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>b_img <span class="op">=</span> ndimage.convolve(x_true, psf, mode<span class="op">=</span><span class="st">'reflect'</span>) <span class="op">+</span> noise_level <span class="op">*</span> rng.standard_normal(x_true.shape)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>S <span class="op">=</span> hno.dct_eigenvalues(psf, b_img.shape)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>B <span class="op">=</span> hno.dct2(b_img)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tsvd_image(B, S, tau):</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    X <span class="op">=</span> np.zeros_like(B)<span class="op">;</span> keep <span class="op">=</span> np.<span class="bu">abs</span>(S) <span class="op">&gt;</span> tau</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    X[keep] <span class="op">=</span> B[keep] <span class="op">/</span> S[keep]</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> hno.idct2(X)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> tikhonov_image(B, S, alpha):</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> hno.idct2(S <span class="op">*</span> B <span class="op">/</span> (S<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> alpha<span class="op">**</span><span class="dv">2</span>))</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>params <span class="op">=</span> np.logspace(<span class="op">-</span><span class="dv">4</span>, <span class="dv">0</span>, <span class="dv">60</span>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>err_tsvd <span class="op">=</span> [hno.rel_error(tsvd_image(B, S, p), x_true) <span class="cf">for</span> p <span class="kw">in</span> params]</span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>err_tikh <span class="op">=</span> [hno.rel_error(tikhonov_image(B, S, p), x_true) <span class="cf">for</span> p <span class="kw">in</span> params]</span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>tau_best, alpha_best <span class="op">=</span> params[np.argmin(err_tsvd)], params[np.argmin(err_tikh)]</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">6.4</span>, <span class="fl">3.2</span>))</span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>ax.loglog(params, err_tsvd, color<span class="op">=</span>hno.ORANGE, label<span class="op">=</span><span class="st">'truncated SVD'</span>)<span class="op">;</span> ax.loglog(params, err_tikh, color<span class="op">=</span>hno.BLUE, label<span class="op">=</span><span class="st">'Tikhonov'</span>)</span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>ax.axhline(hno.rel_error(b_img, x_true), color<span class="op">=</span>hno.INK2, lw<span class="op">=</span><span class="fl">1.0</span>, ls<span class="op">=</span>(<span class="dv">0</span>, (<span class="dv">4</span>, <span class="dv">2</span>)))</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>ax.text(params[<span class="dv">0</span>], hno.rel_error(b_img, x_true) <span class="op">*</span> <span class="fl">1.07</span>, <span class="st">'blurred data'</span>, fontsize<span class="op">=</span><span class="dv">8</span>, color<span class="op">=</span>hno.INK2)</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="fl">0.006</span>, <span class="dv">1</span>)<span class="op">;</span> ax.set_xlabel(<span class="st">'parameter ($</span><span class="ch">\\</span><span class="st">tau$ or $</span><span class="ch">\\</span><span class="st">alpha$)'</span>)<span class="op">;</span> ax.set_ylabel(<span class="st">'relative error'</span>)<span class="op">;</span> ax.legend()</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>ax.set_title(<span class="st">'Error against the regularisation parameter'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'blurred data              error </span><span class="sc">{</span>hno<span class="sc">.</span>rel_error(b_img, x_true)<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'truncated SVD, best tau   </span><span class="sc">{</span>tau_best<span class="sc">:.3f}</span><span class="ss">: error </span><span class="sc">{</span><span class="bu">min</span>(err_tsvd)<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'Tikhonov,      best alpha </span><span class="sc">{</span>alpha_best<span class="sc">:.3f}</span><span class="ss">: error </span><span class="sc">{</span><span class="bu">min</span>(err_tikh)<span class="sc">:.4f}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>blurred data              error 0.0240
+truncated SVD, best tau   0.070: error 0.0098
+Tikhonov,      best alpha 0.060: error 0.0105</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-two-filters" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-two-filters-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="06_regularisation_by_filtering_files/figure-html/fig-two-filters-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-two-filters-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6.2: Relative error of the two filters against their parameter.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-two-filters-img" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:07.579042Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:07.578867Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:07.684952Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:07.684329Z&quot;}}" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>hno.show([b_img, tsvd_image(B, S, tau_best), tikhonov_image(B, S, alpha_best), x_true],</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>         [<span class="st">'blurred + noise'</span>, <span class="st">'truncated SVD (best)'</span>, <span class="st">'Tikhonov (best)'</span>, <span class="st">'true image'</span>], same_scale<span class="op">=</span><span class="va">True</span>, width<span class="op">=</span><span class="fl">2.9</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-two-filters-img" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-two-filters-img-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="06_regularisation_by_filtering_files/figure-html/fig-two-filters-img-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-two-filters-img-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6.3: The data, the best result of each filter, and the true image.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Both filters do about equally well at their best setting, and both curves have the U shape. For too large a parameter Tikhonov loses sooner, because its filter starts damping well before <span class="math inline">\(\sigma_i = \alpha\)</span>. Its advantages lie elsewhere: no ripples from an abrupt cut, and a formulation as a minimisation problem, which is the one that generalises.</p>
+</section>
+<section id="two-errors-that-pull-in-opposite-directions" class="level2" data-number="6.4">
+<h2 data-number="6.4" class="anchored" data-anchor-id="two-errors-that-pull-in-opposite-directions"><span class="header-section-number">6.4</span> Two errors that pull in opposite directions</h2>
+<p>With <span class="math inline">\(b = A x + e\)</span>, the filtered solution differs from the truth by</p>
+<p><span class="math display">\[x_{\text{filt}} - x \;=\; \underbrace{\sum_i (\phi_i - 1)\,(v_i^{\mathsf T} x)\, v_i}_{\text{regularisation error}}
+\;+\; \underbrace{\sum_i \phi_i\, \frac{u_i^{\mathsf T} e}{\sigma_i}\, v_i}_{\text{perturbation error}} .\]</span></p>
+<ul>
+<li>The <strong>regularisation error</strong> is the part of the true image that the filter removed. It grows with <span class="math inline">\(\alpha\)</span>.</li>
+<li>The <strong>perturbation error</strong> is the noise that the filter let through, amplified. It shrinks with <span class="math inline">\(\alpha\)</span>.</li>
+</ul>
+<p>In an experiment we know <span class="math inline">\(x\)</span> and <span class="math inline">\(e\)</span>, so we can compute each part:</p>
+<div id="cell-fig-two-errors" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:07.687199Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:07.687097Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:07.861785Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:07.861326Z&quot;}}" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>X_true <span class="op">=</span> hno.dct2(x_true)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>E <span class="op">=</span> B <span class="op">-</span> S <span class="op">*</span> X_true                                   <span class="co"># the noise, in the transform domain</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>reg_err, pert_err <span class="op">=</span> [], []</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> a <span class="kw">in</span> params:</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    phi <span class="op">=</span> S<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> (S<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> a<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    reg_err.append(np.linalg.norm((phi <span class="op">-</span> <span class="dv">1</span>) <span class="op">*</span> X_true) <span class="op">/</span> np.linalg.norm(X_true))</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    pert_err.append(np.linalg.norm(phi <span class="op">*</span> E <span class="op">/</span> S) <span class="op">/</span> np.linalg.norm(X_true))</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(figsize<span class="op">=</span>(<span class="fl">6.4</span>, <span class="fl">3.2</span>))</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>ax.loglog(params, reg_err, color<span class="op">=</span>hno.AQUA, label<span class="op">=</span><span class="st">'regularisation error'</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>ax.loglog(params, pert_err, color<span class="op">=</span>hno.ORANGE, label<span class="op">=</span><span class="st">'perturbation error'</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>ax.loglog(params, err_tikh, color<span class="op">=</span>hno.BLUE, label<span class="op">=</span><span class="st">'total error'</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>ax.set_ylim(<span class="fl">1e-3</span>, <span class="dv">10</span>)<span class="op">;</span> ax.set_xlabel(<span class="st">'$</span><span class="ch">\\</span><span class="st">alpha$'</span>)<span class="op">;</span> ax.legend()<span class="op">;</span> ax.set_title(<span class="st">'Tikhonov: the two parts of the error'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-two-errors" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-two-errors-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="06_regularisation_by_filtering_files/figure-html/fig-two-errors-output-1.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-two-errors-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6.4: Regularisation error, perturbation error, and their total, for Tikhonov regularisation.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>In <a href="#fig-two-errors" class="quarto-xref">Figure&nbsp;<span>6.4</span></a> the best <span class="math inline">\(\alpha\)</span> is close to where the two curves cross. Every parameter-choice rule below is an attempt to locate that crossing <strong>without seeing either curve</strong>.</p>
+</section>
+<section id="choosing-alpha-without-knowing-the-truth" class="level2" data-number="6.5">
+<h2 data-number="6.5" class="anchored" data-anchor-id="choosing-alpha-without-knowing-the-truth"><span class="header-section-number">6.5</span> Choosing <span class="math inline">\(\alpha\)</span> without knowing the truth</h2>
+<p>All three rules use only the data, through the <strong>residual</strong> <span class="math inline">\(r_\alpha = b - A x_\alpha\)</span>, whose coefficients in the transform domain are <span class="math inline">\((1 - \phi_i)\, \hat b_i\)</span>.</p>
+<p><strong>Discrepancy principle.</strong> If we knew the truth, the residual would be the noise, of squared norm about <span class="math inline">\(N \sigma^2\)</span> for <span class="math inline">\(N\)</span> pixels of noise <span class="math inline">\(\sigma\)</span>. So choose the <span class="math inline">\(\alpha\)</span> whose residual has just that size: explain the data down to the noise, and no further. <em>Needs the noise level.</em></p>
+<p><strong>Generalised cross-validation (GCV).</strong> A good <span class="math inline">\(x_\alpha\)</span> should predict a data value that was left out. Averaged over all pixels this gives a function to minimise, <span class="math display">\[G(\alpha) = \frac{\|r_\alpha\|^2}{\bigl(\sum_i (1 - \phi_i)\bigr)^2} .\]</span> <em>Needs nothing.</em></p>
+<p><strong>L-curve.</strong> Plot <span class="math inline">\(\log\|x_\alpha\|\)</span> against <span class="math inline">\(\log\|r_\alpha\|\)</span> for all <span class="math inline">\(\alpha\)</span>. The curve looks like an L; the corner is where reducing the residual further starts to cost a large increase in the solution. <em>Needs nothing.</em></p>
+<div id="cell-fig-rules" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:07.863772Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:07.863638Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:08.257909Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:08.257408Z&quot;}}" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>grid <span class="op">=</span> np.logspace(<span class="op">-</span><span class="dv">5</span>, <span class="dv">0</span>, <span class="dv">200</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> residual_norm(B, S, a):</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.linalg.norm(a<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> (S<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> a<span class="op">**</span><span class="dv">2</span>) <span class="op">*</span> B)             <span class="co"># (1 - phi) * B</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> solution_norm(B, S, a):</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.linalg.norm(S <span class="op">*</span> B <span class="op">/</span> (S<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> a<span class="op">**</span><span class="dv">2</span>))</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gcv(B, S, a):</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    one_minus_phi <span class="op">=</span> a<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> (S<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> a<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.<span class="bu">sum</span>((one_minus_phi <span class="op">*</span> B)<span class="op">**</span><span class="dv">2</span>) <span class="op">/</span> np.<span class="bu">sum</span>(one_minus_phi)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> choose_alpha(B, S, sigma):</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""The three rules. Returns a dict {rule: alpha}."""</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    dp <span class="op">=</span> <span class="dv">10</span> <span class="op">**</span> optimize.brentq(<span class="kw">lambda</span> la: residual_norm(B, S, <span class="dv">10</span><span class="op">**</span>la) <span class="op">-</span> np.sqrt(B.size) <span class="op">*</span> sigma, <span class="op">-</span><span class="dv">6</span>, <span class="dv">1</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    g <span class="op">=</span> grid[np.argmin([gcv(B, S, a) <span class="cf">for</span> a <span class="kw">in</span> grid])]</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    rho <span class="op">=</span> np.log([residual_norm(B, S, a) <span class="cf">for</span> a <span class="kw">in</span> grid])<span class="op">;</span> eta <span class="op">=</span> np.log([solution_norm(B, S, a) <span class="cf">for</span> a <span class="kw">in</span> grid])</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    d1r, d1e <span class="op">=</span> np.gradient(rho), np.gradient(eta)</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    curvature <span class="op">=</span> (d1r <span class="op">*</span> np.gradient(d1e) <span class="op">-</span> np.gradient(d1r) <span class="op">*</span> d1e) <span class="op">/</span> (d1r<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> d1e<span class="op">**</span><span class="dv">2</span>) <span class="op">**</span> <span class="fl">1.5</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> {<span class="st">'discrepancy principle'</span>: dp, <span class="st">'GCV'</span>: g, <span class="st">'L-curve'</span>: grid[<span class="dv">5</span> <span class="op">+</span> np.argmax(curvature[<span class="dv">5</span>:<span class="op">-</span><span class="dv">5</span>])]}</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> report(B, S, sigma, x_ref, b_ref):</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    errs <span class="op">=</span> [hno.rel_error(tikhonov_image(B, S, a), x_ref) <span class="cf">for</span> a <span class="kw">in</span> grid]</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    rules <span class="op">=</span> {<span class="st">'best possible (uses the truth)'</span>: grid[np.argmin(errs)], <span class="op">**</span>choose_alpha(B, S, sigma)}</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'</span><span class="sc">{</span><span class="st">"rule"</span><span class="sc">:32s}</span><span class="ss"> </span><span class="sc">{</span><span class="st">"alpha"</span><span class="sc">:&gt;8s}</span><span class="ss">   relative error      (blurred data: </span><span class="sc">{</span>hno<span class="sc">.</span>rel_error(b_ref, x_ref)<span class="sc">:.4f}</span><span class="ss">)'</span>)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> name, a <span class="kw">in</span> rules.items():</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'</span><span class="sc">{</span>name<span class="sc">:32s}</span><span class="ss"> </span><span class="sc">{</span>a<span class="sc">:8.4f}</span><span class="ss">   </span><span class="sc">{</span>hno<span class="sc">.</span>rel_error(tikhonov_image(B, S, a), x_ref)<span class="sc">:.4f}</span><span class="ss">'</span>)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> rules</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>rules <span class="op">=</span> report(B, S, noise_level, x_true, b_img)</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>fig, ax <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">2</span>, figsize<span class="op">=</span>(<span class="dv">11</span>, <span class="fl">3.3</span>))</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].loglog(grid, [gcv(B, S, a) <span class="cf">for</span> a <span class="kw">in</span> grid], color<span class="op">=</span>hno.BLUE)<span class="op">;</span> ax[<span class="dv">0</span>].axvline(rules[<span class="st">'GCV'</span>], color<span class="op">=</span>hno.ORANGE, lw<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">0</span>].set_xlabel(<span class="st">'$</span><span class="ch">\\</span><span class="st">alpha$'</span>)<span class="op">;</span> ax[<span class="dv">0</span>].set_title(<span class="st">'GCV function, and its minimum'</span>, loc<span class="op">=</span><span class="st">'left'</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].plot(np.log([residual_norm(B, S, a) <span class="cf">for</span> a <span class="kw">in</span> grid]), np.log([solution_norm(B, S, a) <span class="cf">for</span> a <span class="kw">in</span> grid]), color<span class="op">=</span>hno.BLUE)</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (name, a), col <span class="kw">in</span> <span class="bu">zip</span>(<span class="bu">list</span>(rules.items())[<span class="dv">1</span>:], (hno.AQUA, hno.ORANGE, hno.INK2)):</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>    ax[<span class="dv">1</span>].plot(np.log(residual_norm(B, S, a)), np.log(solution_norm(B, S, a)), <span class="st">'o'</span>, color<span class="op">=</span>col, label<span class="op">=</span>name)</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>ax[<span class="dv">1</span>].set_xlabel(<span class="st">'log residual norm'</span>)<span class="op">;</span> ax[<span class="dv">1</span>].set_ylabel(<span class="st">'log solution norm'</span>)<span class="op">;</span> ax[<span class="dv">1</span>].set_title(<span class="st">'L-curve'</span>, loc<span class="op">=</span><span class="st">'left'</span>)<span class="op">;</span> ax[<span class="dv">1</span>].legend()</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>fig.tight_layout()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>rule                                alpha   relative error      (blurred data: 0.0240)
+best possible (uses the truth)     0.0622   0.0104
+discrepancy principle              0.0353   0.0138
+GCV                                0.0174   0.0264
+L-curve                            0.0043   0.1035</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-rules" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-rules-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="06_regularisation_by_filtering_files/figure-html/fig-rules-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-rules-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6.5: The GCV function with its minimum, and the L-curve with the choices of the three rules.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Compare each rule with the first line, the only one that used the true image.</p>
+<ul>
+<li>The <strong>discrepancy principle</strong> lands close to the best possible choice. It was told the noise level, and here the noise is exactly what it assumes.</li>
+<li><strong>GCV</strong>, which was told nothing, regularises too little, and its result is no better than the blurred data.</li>
+<li>The <strong>L-curve</strong> corner is badly placed on this problem: it regularises far too little and the result is worse than the data. The L-curve is known to struggle when the true image is very smooth, which is our case.</li>
+</ul>
+<p>None of the rules is infallible, and on another problem their ranking can change. This is the honest state of the art; the book discusses the strengths and failure modes of each.</p>
+<p><strong>Estimating the noise level.</strong> The discrepancy principle needs <span class="math inline">\(\sigma\)</span>. It can be read off the data: at the highest frequencies the blurred signal has vanished (notebook 5), so those coefficients are pure noise.</p>
+<div id="e25bb130" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:08.259684Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:08.259584Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:08.262472Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:08.261906Z&quot;}}" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> B.shape[<span class="dv">0</span>]</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>high <span class="op">=</span> B[m <span class="op">//</span> <span class="dv">2</span>:, m <span class="op">//</span> <span class="dv">2</span>:]                                     <span class="co"># the high-frequency quarter</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>sigma_hat <span class="op">=</span> <span class="fl">1.4826</span> <span class="op">*</span> np.median(np.<span class="bu">abs</span>(high))</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'noise estimated from the data: </span><span class="sc">{</span>sigma_hat<span class="sc">:.5f}</span><span class="ss">     true value: </span><span class="sc">{</span>noise_level<span class="sc">}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>noise estimated from the data: 0.00201     true value: 0.002</code></pre>
+</div>
+</div>
+<section id="when-the-assumptions-fail" class="level3">
+<h3 class="anchored" data-anchor-id="when-the-assumptions-fail">When the assumptions fail</h3>
+<p>Now the honest version of the same experiment (notebook 4): the scene is larger than the picture, so light really came from outside, and the reflexive boundary is only an approximation. Same PSF, same noise, same rules.</p>
+<div id="ca33ab08" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:08.264876Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:08.264749Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:08.359739Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:08.359150Z&quot;}}" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>x_h, b_h <span class="op">=</span> hno.make_test_problem(x_true, psf, noise<span class="op">=</span>noise_level)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>S_h, B_h <span class="op">=</span> hno.dct_eigenvalues(psf, b_h.shape), hno.dct2(b_h)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>report(B_h, S_h, noise_level, x_h, b_h)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>rule                                alpha   relative error      (blurred data: 0.0238)
+best possible (uses the truth)     0.0740   0.0164
+discrepancy principle              0.0237   0.0291
+GCV                                0.0104   0.0550
+L-curve                            0.0034   0.1392</code></pre>
+</div>
+</div>
+<p>All three rules now regularise too little, and the “restored” images are worse than the blurred one. Nothing is wrong with the code. The residual <span class="math inline">\(b - A x_\alpha\)</span> now contains two things: the noise, and the <strong>error of the model</strong> at the edges, which is not white noise at all. The rules cannot tell them apart. They see structure in the residual, conclude that the solution does not yet explain the data, and push <span class="math inline">\(\alpha\)</span> down to chase an error that no <span class="math inline">\(x\)</span> can explain.</p>
+<p>This is the most practical lesson of the notebook: <strong>parameter-choice rules are only as good as the model of the data</strong>. With real images the model is never exact: the PSF is measured with some error, it varies across the field, bright stars saturate. The next section shows a rule that asks less of the model.</p>
+</section>
+</section>
+<section id="real-data-and-a-fourth-rule" class="level2" data-number="6.6">
+<h2 data-number="6.6" class="anchored" data-anchor-id="real-data-and-a-fourth-rule"><span class="header-section-number">6.6</span> Real data, and a fourth rule</h2>
+<p>Let us deblur a real image: the average of our 45 exposures. First measure its PSF on a star (notebook 3), then apply Tikhonov regularisation with the parameter chosen by GCV. The PSF is not symmetric in general, so we use the FFT with tapered edges (notebook 4). With complex eigenvalues <span class="math inline">\(K\)</span>, the Tikhonov solution reads <span class="math inline">\(X = \bar K\, Y / (|K|^2 + \alpha^2)\)</span>.</p>
+<div id="a3b1b1fe" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:08.361237Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:08.361123Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:08.471075Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:08.470514Z&quot;}}" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> data[<span class="st">'mean'</span>].astype(<span class="bu">float</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>star <span class="op">=</span> hno.fit_star(y, <span class="dv">161</span>, <span class="dv">169</span>)                               <span class="co"># an unsaturated star</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'PSF of the mean image: FWHM </span><span class="sc">{</span>star[<span class="st">"fwhm"</span>]<span class="sc">:.2f}</span><span class="ss"> px = </span><span class="sc">{</span>star[<span class="st">"fwhm"</span>] <span class="op">*</span> <span class="bu">float</span>(data[<span class="st">"pixel_scale"</span>])<span class="sc">:.2f}</span><span class="ss"> arcsec, Moffat beta </span><span class="sc">{</span>star[<span class="st">"beta"</span>]<span class="sc">:.2f}</span><span class="ss">'</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>K <span class="op">=</span> hno.psf2otf(hno.moffat_psf(y.shape, star[<span class="st">'fwhm'</span>], beta<span class="op">=</span>star[<span class="st">'beta'</span>]))</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>Y <span class="op">=</span> fft2(hno.taper(y))</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gcv_fft(a):</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    one_minus_phi <span class="op">=</span> a<span class="op">**</span><span class="dv">2</span> <span class="op">/</span> (np.<span class="bu">abs</span>(K)<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> a<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.<span class="bu">sum</span>(np.<span class="bu">abs</span>(one_minus_phi <span class="op">*</span> Y)<span class="op">**</span><span class="dv">2</span>) <span class="op">/</span> np.<span class="bu">sum</span>(one_minus_phi)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>alpha_real <span class="op">=</span> grid[np.argmin([gcv_fft(a) <span class="cf">for</span> a <span class="kw">in</span> grid])]</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>x_gcv <span class="op">=</span> ifft2(np.conj(K) <span class="op">*</span> Y <span class="op">/</span> (np.<span class="bu">abs</span>(K)<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> alpha_real<span class="op">**</span><span class="dv">2</span>)).real</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'GCV chooses alpha = </span><span class="sc">{</span>alpha_real<span class="sc">:.4f}</span><span class="ss">;   star FWHM after deblurring: </span><span class="sc">{</span>hno<span class="sc">.</span>fit_star(x_gcv, <span class="dv">161</span>, <span class="dv">169</span>)[<span class="st">"fwhm"</span>]<span class="sc">:.2f}</span><span class="ss"> px'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>PSF of the mean image: FWHM 3.23 px = 2.46 arcsec, Moffat beta 2.72
+GCV chooses alpha = 0.0018;   star FWHM after deblurring: 0.72 px</code></pre>
+</div>
+</div>
+<p>A star narrower than one pixel is not a restoration. GCV has chosen a tiny <span class="math inline">\(\alpha\)</span>, and the result is close to the naive inverse: this is the failure of the previous section, on real data, where the model is never exact (the PSF is itself a noisy measurement, and the bright stars are saturated).</p>
+<p>There is a deeper problem. Even when a rule behaves, <em>how sharp is the result supposed to be?</em> Tikhonov regularisation does not say: the resolution of the output is whatever comes out, and it differs from image to image.</p>
+<p>Our project turns the question around, following <span class="citation" data-cites="magain1998">Magain et al. (<a href="../references.html#ref-magain1998" role="doc-biblioref">1998</a>)</span>. <strong>Decide first what PSF the result should have</strong>: a narrower one than the data, the <em>target</em> <span class="math inline">\(t\)</span>, but not infinitely narrow. Then aim at the sky seen through that target, <span class="math inline">\(t * x\)</span>, instead of the sky itself:</p>
+<p><span class="math display">\[X_t = T\,\frac{\bar K\, Y}{|K|^2 + \lambda} .\]</span></p>
+<p>It is the Tikhonov filter (with <span class="math inline">\(\lambda = \alpha^2\)</span>) multiplied by the transfer function <span class="math inline">\(T\)</span> of the target, which removes on purpose the highest frequencies, those we could never have restored. And the choice of <span class="math inline">\(\lambda\)</span> becomes a <strong>contract</strong>: take the largest <span class="math inline">\(\lambda\)</span>, hence the least noise, for which a star of the result really has the declared width.</p>
+<div id="cell-fig-target" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-11-10T23:29:08.472687Z&quot;,&quot;iopub.status.busy&quot;:&quot;2026-11-10T23:29:08.472581Z&quot;,&quot;iopub.status.idle&quot;:&quot;2026-11-10T23:29:08.589031Z&quot;,&quot;shell.execute_reply&quot;:&quot;2026-11-10T23:29:08.588612Z&quot;}}" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>target_fwhm <span class="op">=</span> <span class="fl">0.8</span> <span class="op">*</span> star[<span class="st">'fwhm'</span>]                               <span class="co"># declare: 20 % sharper than the data</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> hno.psf2otf(hno.gaussian_psf(y.shape, target_fwhm))</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'declared target: </span><span class="sc">{</span>target_fwhm<span class="sc">:.2f}</span><span class="ss"> px'</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>chosen <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> lam <span class="kw">in</span> (<span class="fl">1e-1</span>, <span class="fl">3e-2</span>, <span class="fl">1e-2</span>, <span class="fl">3e-3</span>, <span class="fl">1e-3</span>, <span class="fl">3e-4</span>, <span class="fl">1e-4</span>):</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    x_t <span class="op">=</span> ifft2(T <span class="op">*</span> np.conj(K) <span class="op">*</span> Y <span class="op">/</span> (np.<span class="bu">abs</span>(K)<span class="op">**</span><span class="dv">2</span> <span class="op">+</span> lam)).real</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>    delivered <span class="op">=</span> hno.fit_star(x_t, <span class="dv">161</span>, <span class="dv">169</span>)[<span class="st">'fwhm'</span>]</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>    ok <span class="op">=</span> delivered <span class="op">&lt;=</span> <span class="fl">1.05</span> <span class="op">*</span> target_fwhm</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f'  lambda </span><span class="sc">{</span>lam<span class="sc">:7.0e}</span><span class="ss">: delivered </span><span class="sc">{</span>delivered<span class="sc">:.2f}</span><span class="ss"> px  </span><span class="sc">{</span><span class="st">"&lt;- contract met"</span> <span class="cf">if</span> ok <span class="kw">and</span> chosen <span class="kw">is</span> <span class="va">None</span> <span class="cf">else</span> <span class="st">""</span><span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> ok <span class="kw">and</span> chosen <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>        chosen <span class="op">=</span> (lam, x_t)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>crop <span class="op">=</span> (<span class="bu">slice</span>(<span class="dv">100</span>, <span class="dv">228</span>), <span class="bu">slice</span>(<span class="dv">100</span>, <span class="dv">228</span>))</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>hno.show([y[crop], x_gcv[crop], chosen[<span class="dv">1</span>][crop]],</span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>         [<span class="st">'mean of 45 exposures'</span>, <span class="ss">f'Tikhonov, GCV'</span>, <span class="ss">f'target </span><span class="sc">{</span>target_fwhm<span class="sc">:.2f}</span><span class="ss"> px, $</span><span class="ch">\\</span><span class="ss">lambda$ = </span><span class="sc">{</span>chosen[<span class="dv">0</span>]<span class="sc">:.0e}</span><span class="ss">'</span>], same_scale<span class="op">=</span><span class="va">True</span>, width<span class="op">=</span><span class="fl">3.4</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>declared target: 2.58 px
+  lambda   1e-01: delivered 4.24 px  
+  lambda   3e-02: delivered 3.65 px  
+  lambda   1e-02: delivered 3.27 px  
+  lambda   3e-03: delivered 2.98 px  
+  lambda   1e-03: delivered 2.82 px  
+  lambda   3e-04: delivered 2.70 px  &lt;- contract met
+  lambda   1e-04: delivered 2.63 px  </code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div id="fig-target" class="quarto-float quarto-figure quarto-figure-left anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-target-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="06_regularisation_by_filtering_files/figure-html/fig-target-output-2.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-target-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6.6: The mean of 45 real exposures, its Tikhonov restoration with the GCV parameter, and its restoration to a declared target.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Look at the three images.</p>
+<ul>
+<li>The GCV result is noise, as the sub-pixel star had warned.</li>
+<li>The target version is a credible, slightly sharper image, and it states what it delivers: we checked it on a star. That check is the whole difference between a <em>restoration</em> and a <em>measurement</em>.</li>
+<li>It also shows a <strong>dark ring</strong> around the saturated star: the model violation of notebook 1, still with us. The project removes the stars before deblurring the nebula for exactly this reason.</li>
+</ul>
+<p>One limitation remains. The average of 45 exposures has <strong>one</strong> PSF, a blend of 45 different ones. The sharp exposures have been diluted by the blurred ones before we even started. Notebook 8 removes that limitation.</p>
+</section>
+<section id="your-turn" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="your-turn">Your turn</h2>
+<ol type="1">
+<li><strong>Derive the filter.</strong> Insert <span class="math inline">\(A = U \Sigma V^{\mathsf T}\)</span> into <span class="math inline">\((A^{\mathsf T} A + \alpha^2 I)\,x = A^{\mathsf T} b\)</span> and show that <span class="math inline">\(x = \sum_i \frac{\sigma_i^2}{\sigma_i^2 + \alpha^2} \frac{u_i^{\mathsf T} b}{\sigma_i} v_i\)</span>.</li>
+<li><strong>Gradient.</strong> Write <span class="math inline">\(F(x) = \|Ax - b\|^2 + \alpha^2\|x\|^2\)</span> and compute its gradient. Check numerically, on the 1-D problem, that the gradient vanishes at <code>x_normal</code> and not at the true signal. What does that tell you about what Tikhonov regularisation “believes”?</li>
+<li><strong>More noise.</strong> Redo sections 6.3 to 6.5 with <code>noise_level = 0.02</code>. How do the best <span class="math inline">\(\alpha\)</span> and the three rules move? Which rule tracked the change best?</li>
+<li><strong>Wrong noise level.</strong> Give the discrepancy principle a noise level that is 30 % too small, then 30 % too large. Which mistake is worse? Why do practitioners multiply <span class="math inline">\(\sigma\)</span> by a safety factor slightly above 1?</li>
+<li><strong>Coloured noise.</strong> GCV assumes white noise. Smooth the noise with a small Gaussian before adding it to the blurred image, and look at the GCV function. What goes wrong?</li>
+<li><strong>Ask for too much.</strong> In section 6.6, declare a target of half the width of the data. Can the contract be met? At what cost in the background of the image? What is the honest conclusion?</li>
+</ol>
+</section>
+<section id="where-to-read-more" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="where-to-read-more">Where to read more</h2>
+<ul>
+<li><span class="citation" data-cites="hansen2006">Hansen et al. (<a href="../references.html#ref-hansen2006" role="doc-biblioref">2006</a>)</span>, chapter 6.</li>
+<li><span class="citation" data-cites="talbot2024">Talbot (<a href="../references.html#ref-talbot2024" role="doc-biblioref">2024</a>)</span>, chapter 3: Tikhonov regularisation as penalised least squares, with other penalties.</li>
+<li><span class="citation" data-cites="gonzalez2018">Gonzalez and Woods (<a href="../references.html#ref-gonzalez2018" role="doc-biblioref">2018</a>)</span>, sections 5.8 and 5.9 (Wiener and constrained least-squares filtering).</li>
+<li><span class="citation" data-cites="magain1998">Magain et al. (<a href="../references.html#ref-magain1998" role="doc-biblioref">1998</a>)</span>, for the target-PSF idea.</li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-gonzalez2018" class="csl-entry" role="listitem">
+Gonzalez, Rafael C., and Richard E. Woods. 2018. <em>Digital Image Processing</em>. 4th ed. Pearson.
+</div>
+<div id="ref-hansen2006" class="csl-entry" role="listitem">
+Hansen, Per Christian, James G. Nagy, and Dianne P. O’Leary. 2006. <em>Deblurring Images: Matrices, Spectra, and Filtering</em>. SIAM. <a href="https://doi.org/10.1137/1.9780898718874">https://doi.org/10.1137/1.9780898718874</a>.
+</div>
+<div id="ref-magain1998" class="csl-entry" role="listitem">
+Magain, P., F. Courbin, and S. Sohy. 1998. <span>“Deconvolution with Correct Sampling.”</span> <em>The Astrophysical Journal</em> 494: 472–77. <a href="https://doi.org/10.1086/305187">https://doi.org/10.1086/305187</a>.
+</div>
+<div id="ref-talbot2024" class="csl-entry" role="listitem">
+Talbot, Hugues. 2024. <span>“Lecture Notes on Optimisation: Applications to Computer Vision, Image and Signal Processing, and Machine Learning.”</span> Unpublished manuscript.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/hugues-talbot\.github\.io\/files\/teaching\/deblurring\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../chapters/05_svd_and_spectral_analysis.html" class="pagination-link" aria-label="The SVD and spectral analysis">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">The SVD and spectral analysis</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../chapters/07_colour_and_smoothing_norms.html" class="pagination-link" aria-label="Colour images and smoothing norms">
+        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Colour images and smoothing norms</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
